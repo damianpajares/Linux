@@ -1,0 +1,37 @@
+juan@ds-1326:~$ history
+ #me logueo como root por que no esta sudo, para apt install sudo
+    3  su -
+    4  exit
+    6  who
+   17  ssh-keygen -t rsa
+   20  cd .ssh/
+   21  ls -l
+   22  ssh-copy-id localhost
+   23  cat authorized_keys
+   24  cat id_rsa.pub
+   25  cat authorized_keys
+   27  ssh localhost
+   28  sudo shutdown -h now
+   29  exit
+   30  cat id_rsa.pub >> .ssh/authorized_keys
+   31  exit
+   33  sudo vi /etc/ssh/sshd_config
+   35  sudo apt install git
+   36  git clone https://github.com/damianpajares/Linux.git
+   37  cd Linux/
+   38  chmod +x provision.sh
+   55  git pull
+   56  git status
+   91  sudo ./provision.sh
+   92  vim .provision.conf
+   96  sudo chown juan:juan .provision.conf
+   97  vim .provision.conf
+   98  sudo ./provision.sh
+  112  sudo adduser tc3
+  113  cat /etc/passwd
+  114  sudo vim /etc/group
+  116  sudo visudo
+  124  sudo su   tc3 -
+  129  chown juan:juan id_rsa-tc3
+  130  sudo chown juan:juan id_rsa-tc3
+  134  history
