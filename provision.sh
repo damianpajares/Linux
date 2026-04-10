@@ -134,7 +134,7 @@ install_basic_tools() {
     case "$OS" in
         ubuntu|debian)
             sudo apt-get install -y -qq git curl wget rsync openssh-client openssh-server \
-                software-properties-common apt-transport-https ca-certificates \
+                apt-transport-https ca-certificates \
                 gnupg-agent unzip make vim htop tree net-tools 
             ;;
         centos|rhel|fedora)
