@@ -9,9 +9,12 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+<<<<<<< HEAD
 # Nombre del archivo de configuración del script
 CONFIG_FILE=".provision.conf"
 
+=======
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
 # Función para imprimir mensajes
 log() {
     echo -e "${GREEN}[$(date +'%Y-%m-%d %H:%M:%S')] $1${NC}"
@@ -33,6 +36,7 @@ info() {
 # Función para verificar si el usuario tiene privilegios de sudo
 check_sudo() {
     if [ "$EUID" -ne 0 ]; then
+<<<<<<< HEAD
         if ! command -v sudo &> /dev/null; then
             # Si sudo no está instalado y no somos root
             error "No eres root y el comando 'sudo' no está disponible. En Debian/Ubuntu, puedes instalarlo con: su -c 'apt-get update && apt-get install sudo -y'"
@@ -40,10 +44,15 @@ check_sudo() {
         
         if ! sudo -n true 2>/dev/null; then
             error "Este script requiere privilegios de sudo. Por favor ejecuta con sudo o como root. Si estás en Debian y no funciona, revisa si tu usuario está en el grupo 'sudo'."
+=======
+        if ! sudo -n true 2>/dev/null; then
+            error "Este script requiere privilegios de sudo. Por favor ejecuta con sudo o como root."
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
         fi
     fi
 }
 
+<<<<<<< HEAD
 # Función para cargar la configuración y solicitar valores faltantes al usuario
 load_or_prompt_config() {
     info "Cargando configuración desde $CONFIG_FILE (si existe)..."
@@ -99,11 +108,17 @@ load_or_prompt_config() {
     } > "$CONFIG_FILE"
 }
 
+=======
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
 # Función para detectar la distribución de Linux
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
+<<<<<<< HEAD
         OS=$ID 
+=======
+        OS=$ID
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
         OS_VERSION=$VERSION_ID
     else
         error "No se pudo detectar la distribución de Linux"
@@ -130,11 +145,15 @@ update_system() {
 # Función para instalar paquetes básicos
 install_basic_tools() {
     log "Instalando herramientas básicas..."
+<<<<<<< HEAD
     # Se añade 'make' y 'tree' y 'net-tools'
+=======
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     case "$OS" in
         ubuntu|debian)
             sudo apt-get install -y -qq git curl wget rsync openssh-client openssh-server \
                 software-properties-common apt-transport-https ca-certificates \
+<<<<<<< HEAD
                 gnupg-agent unzip make vim htop tree net-tools 
             ;;
         centos|rhel|fedora)
@@ -143,20 +162,36 @@ install_basic_tools() {
             ;;
         *)
             error "Sistema operativo no soportado para la instalación de herramientas básicas: $OS"
+=======
+                gnupg-agent unzip make nano htop vim
+            ;;
+        centos|rhel|fedora)
+            sudo yum install -y -q git curl wget rsync openssh-clients openssh-server \
+                unzip nano htop vim
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
             ;;
     esac
 }
 
+<<<<<<< HEAD
 # Función para instalar Docker y el plugin de Docker Compose (Corregido para Debian)
 install_docker() {
     log "Instalando Docker Engine y el plugin de Docker Compose (v2)..."
     if command -v docker &> /dev/null && docker compose version &> /dev/null; then
         warn "Docker y Docker Compose (plugin) ya están instalados"
+=======
+# Función para instalar Docker
+install_docker() {
+    log "Instalando Docker..."
+    if command -v docker &> /dev/null; then
+        warn "Docker ya está instalado"
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
         return
     fi
 
     case "$OS" in
         ubuntu)
+<<<<<<< HEAD
             sudo apt-get update -qq
             sudo apt-get install -y -qq ca-certificates curl gnupg lsb-release
             sudo install -m 0755 -d /etc/apt/keyrings
@@ -197,12 +232,50 @@ install_docker() {
         sudo usermod -aG docker "$USER"
     fi
     
+=======
+            # Agregar repositorio oficial de Docker
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+            sudo add-apt-repository \
+                "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+                $(lsb_release -cs) \
+                stable"
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io
+            ;;
+        debian)
+            # Agregar repositorio oficial de Docker
+            curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+            sudo add-apt-repository \
+                "deb [arch=amd64] https://download.docker.com/linux/debian \
+                $(lsb_release -cs) \
+                stable"
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq docker-ce docker-ce-cli containerd.io
+            ;;
+        centos)
+            sudo yum install -y -q yum-utils
+            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            sudo yum install -y -q docker-ce docker-ce-cli containerd.io
+            ;;
+        fedora)
+            sudo dnf -y -q install dnf-plugins-core
+            sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+            sudo dnf -y -q install docker-ce docker-ce-cli containerd.io
+            ;;
+    esac
+
+    # Agregar usuario actual al grupo docker
+    sudo usermod -aG docker $USER
+    
+    # Habilitar e iniciar Docker
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     sudo systemctl enable docker
     sudo systemctl start docker
     
     log "Docker instalado correctamente"
 }
 
+<<<<<<< HEAD
 # Función para instalar Docker Compose Standalone (Solo para retrocompatibilidad con 'docker-compose')
 install_docker_compose() {
     log "Instalando Docker Compose Standalone (v2) para compatibilidad con 'docker-compose'..."
@@ -228,10 +301,32 @@ install_docker_compose() {
     
     log "Docker Compose Standalone (v2) instalado correctamente como 'docker-compose'"
     warn "NOTA: Se recomienda usar 'docker compose' (sin guion) que se instala como plugin."
+=======
+# Función para instalar Docker Compose
+install_docker_compose() {
+    log "Instalando Docker Compose..."
+    if command -v docker-compose &> /dev/null; then
+        warn "Docker Compose ya está instalado"
+        return
+    fi
+
+    # Descargar la última versión estable de Docker Compose
+    sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.0/docker-compose-$(uname -s)-$(uname -m)" \
+        -o /usr/local/bin/docker-compose --silent
+    
+    # Dar permisos de ejecución
+    sudo chmod +x /usr/local/bin/docker-compose
+    
+    # Crear enlace simbólico para compatibilidad
+    sudo ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+    
+    log "Docker Compose instalado correctamente"
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
 }
 
 # Función para configurar SSH
 setup_ssh() {
+<<<<<<< HEAD
     local SSH_CONFIG="/etc/ssh/sshd_config"
     local SSH_CONFIG_BACKUP="${SSH_CONFIG}.bak.$(date +%Y%m%d%H%M%S)"
 
@@ -246,10 +341,15 @@ setup_ssh() {
     fi
 
     # 2. Modificar archivo
+=======
+    log "Configurando SSH..."
+    
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     # Asegurarse de que el directorio .ssh existe
     mkdir -p ~/.ssh
     chmod 700 ~/.ssh
     
+<<<<<<< HEAD
     # Deshabilitar PermitRootLogin
     sudo sed -i -E 's/^\s*#?PermitRootLogin.*/PermitRootLogin no/' "$SSH_CONFIG"
     if ! grep -q '^PermitRootLogin' "$SSH_CONFIG"; then
@@ -267,12 +367,23 @@ setup_ssh() {
     sudo systemctl restart ssh || sudo service ssh restart 
     
     log "SSH configurado correctamente. El respaldo está en $SSH_CONFIG_BACKUP"
+=======
+    # Configurar permisos adecuados para el directorio SSH
+    sudo sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+    sudo sed -i 's/PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+    
+    # Reiniciar servicio SSH
+    sudo systemctl restart ssh
+    
+    log "SSH configurado correctamente"
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
 }
 
 # Función para configurar el acceso SSH a GitHub
 setup_github_ssh() {
     log "Configurando acceso SSH a GitHub..."
     
+<<<<<<< HEAD
     local SSH_KEY_PATH="$HOME/.ssh/id_rsa"
     local SSH_PUB_KEY_PATH="$HOME/.ssh/id_rsa.pub"
 
@@ -284,11 +395,18 @@ setup_github_ssh() {
         mkdir -p ~/.ssh
         ssh-keygen -t rsa -b 4096 -C "devops@provision-script" -N "" -f "$SSH_KEY_PATH"
         log "Clave SSH generada."
+=======
+    # Verificar si ya existe una clave SSH
+    if [ ! -f ~/.ssh/id_rsa ]; then
+        info "Generando nueva clave SSH..."
+        ssh-keygen -t rsa -b 4096 -C "devops@laravel-docker" -N "" -f ~/.ssh/id_rsa
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     fi
     
     # Mostrar la clave pública para GitHub
     log "Por favor agrega la siguiente clave pública a tu cuenta de GitHub:"
     echo -e "${YELLOW}"
+<<<<<<< HEAD
     if [ -f "$SSH_PUB_KEY_PATH" ]; then
         cat "$SSH_PUB_KEY_PATH"
     else
@@ -297,16 +415,26 @@ setup_github_ssh() {
     echo -e "${NC}"
     
     read -r -p "Presiona Enter después de haber agregado la clave a GitHub..."
+=======
+    cat ~/.ssh/id_rsa.pub
+    echo -e "${NC}"
+    
+    read -p "Presiona Enter después de haber agregado la clave a GitHub..."
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     
     # Probar la conexión a GitHub
     log "Probando conexión SSH con GitHub..."
     ssh -T git@github.com || true
+<<<<<<< HEAD
     log "Prueba de conexión a GitHub finalizada."
+=======
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
 }
 
 # Función para clonar el repositorio
 clone_repository() {
     local repo_url=$1
+<<<<<<< HEAD
     local target_dir=$2
     
     log "Clonando repositorio: $repo_url en $target_dir"
@@ -326,11 +454,28 @@ clone_repository() {
         # Crear la ruta completa y asegurar permisos
         sudo mkdir -p "$target_dir"
         sudo chown "$USER":"$USER" "$target_dir"
+=======
+    local target_dir=${2:-"/opt/laravel-app"}
+    
+    log "Clonando repositorio: $repo_url"
+    
+    if [ -d "$target_dir" ]; then
+        warn "El directorio $target_dir ya existe. Actualizando en lugar de clonar..."
+        cd "$target_dir"
+        git pull origin main
+    else
+        sudo mkdir -p "$target_dir"
+        sudo chown $USER:$USER "$target_dir"
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
         git clone "$repo_url" "$target_dir"
         cd "$target_dir"
     fi
     
+<<<<<<< HEAD
     log "Configurando permisos iniciales del repositorio..."
+=======
+    # Configurar permisos para el proyecto
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     find . -type d -exec chmod 755 {} \;
     find . -type f -exec chmod 644 {} \;
     
@@ -339,6 +484,7 @@ clone_repository() {
 
 # Función para configurar el entorno del proyecto
 setup_project() {
+<<<<<<< HEAD
     local compose_file=$1
     local project_dir=$2
     
@@ -387,13 +533,50 @@ setup_project() {
          log "Asegurando permisos del host para '$project_dir/storage' y '$project_dir/bootstrap/cache'..."
          sudo chmod -R 775 "$project_dir/storage" "$project_dir/bootstrap/cache"
     fi
+=======
+    log "Configurando el proyecto Laravel..."
+    
+    # Copiar archivo de entorno si no existe
+    if [ ! -f .env ]; then
+        cp .env.example .env
+    fi
+    
+    # Construir contenedores Docker
+    log "Construyendo contenedores Docker..."
+    docker-compose -f docker-compose.dev.yml build
+    
+    # Iniciar contenedores
+    log "Iniciando contenedores..."
+    docker-compose -f docker-compose.dev.yml up -d
+    
+    # Instalar dependencias de Composer
+    log "Instalando dependencias de Composer..."
+    docker-compose -f docker-compose.dev.yml exec app composer install
+    
+    # Generar key de Laravel
+    log "Generando key de aplicación..."
+    docker-compose -f docker-compose.dev.yml exec app php artisan key:generate
+    
+    # Ejecutar migraciones
+    log "Ejecutando migraciones de base de datos..."
+    docker-compose -f docker-compose.dev.yml exec app php artisan migrate --seed
+    
+    # Configurar permisos de almacenamiento
+    log "Configurando permisos..."
+    docker-compose -f docker-compose.dev.yml exec app chmod -R 775 storage bootstrap/cache
+    docker-compose -f docker-compose.dev.yml exec app chown -R www-data:www-data storage bootstrap/cache
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     
     log "Proyecto configurado correctamente"
 }
 
 # Función principal
 main() {
+<<<<<<< HEAD
     log "Iniciando proceso de provisionamiento multi-sistema"
+=======
+    log "Iniciando proceso de provisionamiento para entorno de desarrollo"
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
     
     # Verificar privilegios de sudo
     check_sudo
@@ -402,6 +585,7 @@ main() {
     detect_os
     info "Sistema operativo detectado: $OS $OS_VERSION"
     
+<<<<<<< HEAD
     # Cargar/solicitar variables de configuración
     load_or_prompt_config
     
@@ -445,3 +629,51 @@ main() {
 
 # Ejecutar función principal
 main "$@"
+=======
+    # Actualizar sistema
+    update_system
+    
+    # Instalar herramientas básicas
+    install_basic_tools
+    
+    # Instalar Docker
+    install_docker
+    
+    # Instalar Docker Compose
+    install_docker_compose
+    
+    # Configurar SSH
+    setup_ssh
+    
+    # Configurar acceso a GitHub
+    setup_github_ssh
+    
+    # Solicitar URL del repositorio
+    read -p "Introduce la URL SSH de tu repositorio GitHub (ej: git@github.com:usuario/repo.git): " repo_url
+    
+    if [ -z "$repo_url" ]; then
+        error "Debes proporcionar una URL de repositorio válida"
+    fi
+    
+    # Clonar repositorio
+    clone_repository "$repo_url"
+    
+    # Configurar proyecto
+    setup_project
+    
+    # Mostrar información final
+    log "Provisionamiento completado exitosamente!"
+    info "Acceso a la aplicación: http://localhost"
+    info "Acceso a PHPMyAdmin: http://localhost:8080"
+    info "Para ver los logs: docker-compose logs -f"
+    info "Para detener los contenedores: docker-compose down"
+    info "Para iniciar los contenedores: docker-compose up -d"
+    
+    # Recordatorio sobre la clave SSH
+    warn "Recuerda que has tenido que agregar manualmente la clave SSH a tu cuenta de GitHub"
+    warn "Puedes ver tu clave pública con: cat ~/.ssh/id_rsa.pub"
+}
+
+# Ejecutar función principal
+main "$@"
+>>>>>>> 77b22663acec1e0678b00b2c1ac1a940d80b28f6
