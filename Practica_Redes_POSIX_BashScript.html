@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Práctica · Redes POSIX &amp; Bash Script</title>
+<style>
+  :root{
+    --bg:#0D1117; --card:#161B22; --border:#30363D;
+    --txt:#E6EDF3; --mut:#8B949E;
+    --green:#3FB950; --green-soft:#7EE787; --green-bg:#12261A; --green-line:#23492F;
+    --orange:#FFA657; --orange-bg:#2b2010; --blue:#A5D6FF; --red:#FF7B72; --red-bg:#2D1517; --red-line:#5C2326;
+    --mono:"JetBrains Mono","Cascadia Code",ui-monospace,"Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;
+       display:flex;justify-content:center;padding:24px 16px 60px}
+  .wrap{width:100%;max-width:860px}
+
+  .prompt{font-family:var(--mono);font-size:14px;margin-bottom:6px;word-break:break-all}
+  .prompt .u{color:var(--green)} .prompt .p{color:var(--blue)}
+  h1{font-size:clamp(22px,4.5vw,32px);font-weight:700;margin:14px 0 4px}
+  .sub{color:var(--mut);font-size:15px;margin-bottom:22px}
+  .back{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;
+        color:var(--mut);background:none;border:none;cursor:pointer;margin-bottom:14px;padding:4px 0}
+  .back:hover{color:var(--txt)}
+
+  .progress{font-family:var(--mono);font-size:13px;color:var(--mut);display:flex;
+            align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .bar{flex:1;min-width:120px;height:8px;background:var(--card);border:1px solid var(--border);
+       border-radius:99px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .3s ease}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+        overflow:hidden;animation:up .25s ease}
+  @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){ .card{animation:none!important} .bar>i{transition:none} }
+  .tbar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .tbar .lbl{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .cbody{padding:22px 22px 24px}
+
+  .badge{display:inline-block;font-family:var(--mono);font-size:12.5px;font-weight:700;
+         color:var(--green);background:var(--green-bg);border:1px solid var(--green-line);
+         border-radius:6px;padding:4px 10px;margin-bottom:6px}
+  .badge.flagged{color:var(--orange);background:var(--orange-bg);border-color:#5c3d17}
+  .cat{font-size:13px;color:var(--mut);margin-left:8px}
+  .qtext{font-size:19px;font-weight:700;line-height:1.35;margin:10px 0 6px}
+  .qtext code{font-family:var(--mono);color:var(--green-soft);font-size:.88em;
+              background:var(--bg);padding:2px 6px;border-radius:5px}
+  .hint{font-size:13px;color:var(--mut);font-style:italic;margin-bottom:14px}
+
+  .opts{display:grid;gap:10px;margin-top:8px}
+  .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+       background:var(--bg);border:1px solid var(--border);border-radius:8px;
+       padding:12px 14px;color:var(--txt);font-family:var(--mono);font-size:14px;
+       transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--mut)}
+  .opt:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .opt .let{flex:0 0 28px;height:28px;border:1.5px solid var(--orange);border-radius:50%;
+            display:grid;place-items:center;font-weight:700;font-size:12.5px;color:var(--orange)}
+  .opt.multi .let{border-radius:7px}
+  .opt:disabled{cursor:default}
+  .opt.correct{background:var(--green-bg);border-color:var(--green)}
+  .opt.correct .let{border-color:var(--green);color:var(--green)}
+  .opt.correct span.txt{color:var(--green-soft);font-weight:700}
+  .opt.wrong{background:var(--red-bg);border-color:var(--red-line)}
+  .opt.wrong .let{border-color:var(--red);color:var(--red)}
+  .opt.wrong span.txt{color:var(--red)}
+  .opt.dim{opacity:.5}
+  .opt.picked:not(.correct):not(.wrong){background:var(--green-bg);border-color:var(--green)}
+  .mark{margin-left:auto;font-family:var(--mono);font-weight:700}
+  .mark.ok{color:var(--green)} .mark.no{color:var(--red)}
+
+  .typewrap{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .typewrap input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);
+                  border-radius:8px;padding:12px 14px;color:var(--txt);font-family:var(--mono);
+                  font-size:15px}
+  .typewrap input:focus{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  .typewrap input:disabled{opacity:.7}
+  .typewrap input.correct{border-color:var(--green);background:var(--green-bg);color:var(--green-soft)}
+  .typewrap input.wrong{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+
+  .feed{margin-top:16px;border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.5;display:none}
+  .feed.show{display:block}
+  .feed.good{background:var(--green-bg);border:1px solid var(--green-line)}
+  .feed.bad{background:var(--red-bg);border:1px solid var(--red-line)}
+  .feed b.tag{font-family:var(--mono)}
+  .feed.good b.tag{color:var(--green)} .feed.bad b.tag{color:var(--red)}
+  .feed code{font-family:var(--mono);color:var(--green-soft);background:var(--bg);
+             padding:1px 5px;border-radius:4px}
+  .feed .accepted{font-family:var(--mono);color:var(--green-soft);margin-top:4px}
+
+  .actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:var(--mono);font-size:13.5px;font-weight:700;cursor:pointer;
+       border-radius:8px;padding:10px 16px;border:1px solid var(--border);
+       background:var(--card);color:var(--txt);transition:filter .15s}
+  .btn:hover{filter:brightness(1.2)}
+  .btn:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .btn.primary{background:var(--green-bg);border-color:var(--green);color:var(--green-soft)}
+  .btn.flag{background:var(--orange-bg);border-color:#5c3d17;color:var(--orange)}
+  .btn.finish{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .btn:disabled{opacity:.35;cursor:default;filter:none}
+  .spacer{flex:1 1 auto}
+
+  /* ---- home: tarjetas de módulo ---- */
+  .modcard{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--border);
+           border-radius:10px;padding:20px;margin-bottom:14px}
+  .modcard .mhead{display:flex;align-items:center;gap:10px}
+  .modnum{font-family:var(--mono);font-size:13px;color:var(--bg);background:var(--green);
+          border-radius:6px;padding:3px 9px;font-weight:700}
+  .modtitle{font-size:18px;font-weight:700}
+  .moddesc{color:var(--mut);font-size:14px;line-height:1.5}
+  .modmeta{font-family:var(--mono);font-size:12.5px;color:var(--mut);display:flex;gap:14px;flex-wrap:wrap}
+  .modmeta b{color:var(--green-soft)}
+  .modfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+
+  /* ---- navegador de preguntas ---- */
+  .navtoggle{width:100%;text-align:left;background:var(--card);border:1px solid var(--border);
+             border-radius:8px;padding:10px 14px;color:var(--mut);font-family:var(--mono);
+             font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .navtoggle:hover{border-color:var(--mut)}
+  .navtoggle .car{margin-left:auto;transition:transform .15s}
+  .navtoggle.open .car{transform:rotate(180deg)}
+  .navgrid{display:none;grid-template-columns:repeat(10,1fr);gap:6px;margin:-6px 0 14px;
+           background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+  .navgrid.open{display:grid}
+  @media (max-width:520px){.navgrid{grid-template-columns:repeat(7,1fr)}}
+  .navcell{aspect-ratio:1;border:1px solid var(--border);border-radius:5px;background:var(--bg);
+           color:var(--mut);font-family:var(--mono);font-size:11px;cursor:pointer;
+           display:grid;place-items:center;transition:border-color .1s}
+  .navcell:hover{border-color:var(--mut)}
+  .navcell.ok{background:var(--green-bg);border-color:var(--green-line);color:var(--green-soft)}
+  .navcell.no{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .navcell.flag{border-color:var(--orange);color:var(--orange)}
+  .navcell.current{border-width:2px;border-color:var(--blue);color:var(--blue);font-weight:700}
+  .navlegend{font-family:var(--mono);font-size:11.5px;color:var(--mut);display:flex;gap:14px;
+             flex-wrap:wrap;margin:-4px 0 14px;padding:0 2px}
+  .navlegend span{display:inline-flex;align-items:center;gap:5px}
+  .navlegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* ---- resumen de módulo ---- */
+  .result{display:none}
+  .result.show{display:block}
+  .rout{font-family:var(--sans);font-size:14px;line-height:1.6;padding:22px}
+  .score-big{font-family:var(--mono);font-size:clamp(34px,7vw,48px);font-weight:700;color:var(--green);margin:6px 0}
+  .score-big .of{font-size:.42em;color:var(--mut);font-weight:400}
+  .msg{font-size:16px;margin:6px 0 16px;color:var(--txt)}
+  .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  @media (max-width:560px){.statrow{grid-template-columns:1fr 1fr}}
+  .stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .stat .t{font-family:var(--mono);font-size:11px;color:var(--mut)}
+  .stat .v{font-family:var(--mono);font-size:20px;font-weight:700;margin-top:4px}
+  .stat.ok .v{color:var(--green-soft)} .stat.no .v{color:var(--red)} .stat.pend .v{color:var(--orange)}
+  .revtitle{font-family:var(--mono);font-size:13px;color:var(--mut);margin:18px 0 10px;
+            text-transform:uppercase;letter-spacing:.04em}
+  .revwrap{max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+  .revrow{display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-top:1px solid var(--border);
+          font-size:13px}
+  .revrow:first-child{border-top:none}
+  .revrow .rn{font-family:var(--mono);color:var(--mut);flex:0 0 26px}
+  .revrow .rq{flex:1;min-width:0}
+  .revrow .rya{font-family:var(--mono);font-size:12px;margin-top:3px;color:var(--mut)}
+  .revrow .mkok{color:var(--green)} .revrow .mkno{color:var(--red)}
+  .copied{font-family:var(--mono);font-size:13px;color:var(--green);opacity:0;transition:opacity .2s}
+  .copied.on{opacity:1}
+
+  footer{margin-top:26px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  footer .g{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt"><span class="u">ariel@cept</span>:<span class="p">~</span>$ ./practica.sh --menu</div>
+  <h1>Práctica · Redes POSIX &amp; Bash Script</h1>
+  <div class="sub">Repaso interactivo con corrección al instante. Marcá con ⚑ las que quieras dejar para después y volvé a ellas cuando quieras.</div>
+
+  <div id="homeview"></div>
+
+  <button type="button" class="back" id="backBtn" style="display:none">← Volver a módulos</button>
+  <div class="progress" id="progress" style="display:none">
+    <span id="ptext">[ 0/0 ]</span>
+    <div class="bar"><i id="pbar"></i></div>
+    <span id="ppend">0 pendientes</span>
+  </div>
+  <button type="button" class="navtoggle" id="navtoggle" style="display:none">
+    <span id="navtoggletxt">Ver todas las preguntas</span><span class="car">▾</span>
+  </button>
+  <div class="navlegend" id="navlegend" style="display:none">
+    <span><i style="background:var(--green-bg);border:1px solid var(--green-line)"></i>correcta</span>
+    <span><i style="background:var(--red-bg);border:1px solid var(--red-line)"></i>incorrecta</span>
+    <span><i style="background:var(--bg);border:1px solid var(--orange)"></i>marcada</span>
+    <span><i style="background:var(--bg);border:1px solid var(--border)"></i>sin ver</span>
+  </div>
+  <div class="navgrid" id="navgrid"></div>
+
+  <div class="card" id="qcard" style="display:none">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl" id="tlabel">pregunta.sh</span>
+    </div>
+    <div class="cbody" id="qbody"></div>
+  </div>
+
+  <div class="card result" id="rcard">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">resumen</span>
+    </div>
+    <div class="rout" id="rbody"></div>
+  </div>
+
+  <footer><span class="g">exit 0</span> — ESI · CEPT · Redes POSIX, Bash Script</footer>
+</div>
+
+<script>
+"use strict";
+/* ===================== DATOS ===================== */
+/* type: "mc" (single), "multi", "type" (comando a escribir)
+   mc/multi: opts[], correct: idx | idx[]
+   type: accept: string[] (respuestas válidas, normalizadas al comparar) */
+const MODULES = [
+{
+  key:"m1", name:"Módulo 1 — Comandos Linux", short:"Mod.1",
+  desc:"Comandos esenciales de sistema, procesos, red, archivos y disco — opción múltiple y comandos a escribir.",
+  questions:[
+    { type:"mc", cat:"Red", q:"¿Qué información proporciona el comando <code>ip a</code>?",
+      opts:["Información de la versión del sistema","Los puntos de montaje de las particiones del sistema","Muestra las particiones del disco, el tamaño y los tipos","Las direcciones IP asignadas al sistema"], correct:3,
+      exp:"<code>ip a</code> (abreviatura de <code>ip address show</code>) lista las interfaces de red y las direcciones IP asignadas a cada una." },
+    { type:"mc", cat:"Procesos", q:'¿Para qué se utiliza el comando <code>ps aux | grep ssh</code>?',
+      opts:["Muestra el número de puerto y el PID en ese puerto","Lista todos los archivos abiertos del sistema","Informa la ruta de los archivos abiertos en ese puerto","Muestra los procesos que coincidan con \"ssh\""], correct:3,
+      exp:"<code>ps aux</code> lista todos los procesos y <code>grep ssh</code> filtra mostrando solo las líneas que contienen \"ssh\" — típicamente para encontrar el proceso sshd corriendo." },
+    { type:"mc", cat:"Archivos", q:"¿Qué comando muestra las últimas 10 líneas de un archivo?",
+      opts:["tail","tail -f","tailf -n 10","head"], correct:0,
+      exp:"<code>tail</code> muestra por defecto las últimas 10 líneas de un archivo. <code>tail -f</code> además lo sigue en tiempo real, y <code>head</code> muestra las primeras 10." },
+    { type:"mc", cat:"Procesos", q:"¿Para qué sirve el comando <code>ps aux | grep 'telnet'</code>?",
+      opts:["Buscar cadenas de caracteres \"telnet\" dentro del archivo de sistema","Encuentra el PID de los procesos relacionados con telnet","Buscar cadenas de caracteres \"telnet\" dentro de la carpeta actual","Buscar archivos dentro del sistema que contengan la cadena \"telnet\"","Ninguna de las anteriores"], correct:1,
+      exp:"Combinando <code>ps aux</code> con <code>grep</code> se filtra la lista de procesos para encontrar el PID de los procesos relacionados con telnet." },
+    { type:"mc", cat:"Procesos", q:"El comando <code>top</code> muestra:",
+      opts:["Listar procesos de forma ordenada","El tamaño de disco disponible","Todos los procesos en ejecución, actualizados en tiempo real","Ninguno de los anteriores"], correct:2,
+      exp:"<code>top</code> muestra en tiempo real los procesos en ejecución junto con su consumo de CPU y memoria, refrescándose periódicamente." },
+    { type:"mc", cat:"Red", q:"¿Qué información brinda el comando <code>netstat -tupln</code>?",
+      opts:["Lista las conexiones que están escuchando en un puerto, indicando el proceso que lo levanta, sin resolver nombres de dominio","Lista todos los servicios de red del sistema, sin resolver los nombres de dominio","Lista los servicios de red indicando el proceso, sin resolver dominios, escuchando en un socket","Lista las conexiones activas de red indicando el proceso, sin resolver dominios, escuchando en un puerto","Ninguna de las anteriores"], correct:0,
+      exp:"<code>-t</code> (TCP) <code>-u</code> (UDP) <code>-p</code> (proceso/PID) <code>-l</code> (solo en escucha) <code>-n</code> (sin resolver DNS): lista los puertos en escucha con el proceso que los levanta." },
+    { type:"mc", cat:"Disco", q:"¿Cuál es el comando para ver el espacio en disco ocupado por los archivos en la carpeta actual?",
+      opts:["df -hl","du -hs","du -ah","Ninguna de las anteriores"], correct:1,
+      exp:"<code>du -hs</code> resume (<code>-s</code>) el uso de disco de la carpeta actual en formato legible (<code>-h</code>). <code>df</code> muestra el espacio del sistema de archivos completo." },
+    { type:"mc", cat:"Archivos", q:"¿Qué comando muestra la información de todos los archivos en el directorio?",
+      opts:["ls -al","ls -s","ls -so","ls -ht"], correct:0,
+      exp:"<code>ls -al</code> lista (<code>-l</code>) en formato largo todos los archivos, incluidos los ocultos (<code>-a</code>)." },
+    { type:"mc", cat:"Logs", q:'¿Para qué sirve el comando <code>head /var/log/apache2/error.log</code>?',
+      opts:["Muestra mensajes de arranque y hardware","Muestra mensajes de acceso denegado al sistema","Muestra los errores del servidor web","Muestra los primeros 10 errores del servidor web"], correct:3,
+      exp:"<code>head</code> muestra por defecto las primeras 10 líneas de un archivo; aplicado al log de errores de Apache, muestra los primeros 10 errores registrados." },
+    { type:"mc", cat:"Procesos", q:"¿Para qué se utiliza el comando <code>pstree</code>?",
+      opts:["Muestra los procesos corriendo en el sistema en formato de árbol","Muestra el contenido del directorio actual en formato árbol","Buscar archivos por nombre","Cambiar al directorio anterior"], correct:0,
+      exp:"<code>pstree</code> representa los procesos del sistema como un árbol, mostrando las relaciones padre-hijo entre ellos." },
+    { type:"mc", cat:"Transferencia", q:"La herramienta <code>scp</code> permite:",
+      opts:["Listar procesos de forma ordenada","Copiar de forma segura los archivos entre sistemas mediante la red","Ver la dependencia de los procesos","Ninguna de las anteriores"], correct:1,
+      exp:"<code>scp</code> (secure copy) copia archivos entre sistemas de forma segura utilizando el protocolo SSH." },
+    { type:"multi", cat:"Paquetes", q:"¿Cuáles de las siguientes herramientas se utilizan para instalar paquetes en Linux?",
+      opts:["yum","apt","wget","ping"], correct:[0,1],
+      exp:"<code>yum</code> (RHEL/CentOS) y <code>apt</code> (Debian/Ubuntu) son gestores de paquetes. <code>wget</code> solo descarga archivos y <code>ping</code> prueba conectividad de red." },
+    { type:"mc", cat:"SSH", q:"¿Comando para conectarse por SSH utilizando una clave específica?",
+      opts:["ssh -i .ssh/id_rsa usuario@host","ssh -s id_rsa usuario@host","scp -i id_rsa usuario@host","ssh -p 23 -i .ssh/id_rsa usuario@host"], correct:0,
+      exp:"La opción <code>-i</code> indica el archivo de identidad (clave privada) a usar para autenticarse por SSH." },
+    { type:"mc", cat:"Servicios", q:"¿Cuál de los siguientes es un servidor de base de datos soportado en Linux?",
+      opts:["LAMP","MariaDB","SqlServer","Postfix"], correct:1,
+      exp:"<code>MariaDB</code> es un servidor de base de datos. LAMP es un stack completo, SQL Server no es la opción esperada aquí y Postfix es un servidor de correo." },
+    { type:"mc", cat:"Archivos", q:'¿Para qué uso el comando <code>cp -r /origen /destino</code>?',
+      opts:["Copia el contenido del directorio de origen al directorio de destino, de forma recursiva","Para copiar todos los procesos del sistema, de forma recursiva","Para copiar todos los archivos de la carpeta actual, de forma recursiva","Ninguna de las anteriores"], correct:0,
+      exp:"<code>cp -r</code> copia un directorio y todo su contenido (recursivamente) desde el origen indicado hacia el destino indicado." },
+    { type:"mc", cat:"Servicios", q:"¿Cuál de los siguientes son servidores WEB soportados en Linux?",
+      opts:["IIS","BIND9","Apache2","PHP8.3"], correct:2,
+      exp:"<code>Apache2</code> es un servidor web. IIS es de Windows, BIND9 es un servidor DNS y PHP es un lenguaje de programación, no un servidor web." },
+    { type:"mc", cat:"SSH", q:"¿Comando para conectarse de forma remota mediante SSH utilizando el puerto 23?",
+      opts:["ssh -p 23 usuario@servidor","ssh -r -X -p 22 usuario@servidor aplicación","ssh -U usuario@servidor aplicación","Ninguna de las anteriores"], correct:0,
+      exp:"La opción <code>-p</code> indica el puerto de conexión; así se usa el 23 en lugar del 22 por defecto." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando se utiliza para ver el contenido de un directorio?",
+      accept:["ls"], exp:"<code>ls</code> lista el contenido de un directorio." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando se usa para cambiar los permisos de un archivo?",
+      accept:["chmod"], exp:"<code>chmod</code> cambia los permisos (lectura, escritura, ejecución) de un archivo o directorio." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando muestra el espacio disponible en disco?",
+      accept:["df"], exp:"<code>df</code> muestra el espacio disponible y usado en los sistemas de archivos montados." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando muestra información de versión sobre el sistema operativo?",
+      accept:["uname"], exp:"<code>uname</code> (con <code>-a</code> o <code>-r</code>) muestra información del sistema y del kernel." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando muestra los procesos activos en el sistema?",
+      accept:["ps","top"], exp:"<code>ps</code> muestra una foto de los procesos activos; <code>top</code> los muestra en tiempo real. Ambas son válidas." },
+    { type:"type", cat:"Comandos", q:"¿Cuál es el editor de texto en terminal Linux utilizado por programadores y administradores?",
+      accept:["vim","vi","nano","emacs"], exp:"Los editores de terminal más usados son <code>vim</code>/<code>vi</code>, <code>nano</code> y <code>emacs</code>." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando permite elevar los privilegios de ejecución?",
+      accept:["sudo","su"], exp:"<code>sudo</code> ejecuta un comando puntual con privilegios elevados; <code>su</code> cambia de usuario (por ejemplo, a root)." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando permite ver la IP asignada?",
+      accept:["ip","ifconfig"], exp:"<code>ip</code> (moderno) o <code>ifconfig</code> (clásico) muestran las direcciones IP asignadas a las interfaces de red." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando permite ver la memoria RAM utilizada?",
+      accept:["free"], exp:"<code>free</code> muestra la memoria RAM total, usada y libre del sistema." },
+    { type:"type", cat:"Comandos", q:"¿Qué comando permite comprimir archivos de forma eficiente?",
+      accept:["tar","gzip","zip"], exp:"<code>tar</code> (frecuentemente combinado con gzip vía <code>tar czf</code>), <code>gzip</code> y <code>zip</code> son las herramientas de compresión más usadas." }
+  ]
+},
+{
+  key:"m2", name:"Módulo 2 — Comandos con Modificadores", short:"Mod.2",
+  desc:"Los mismos comandos del Módulo 1, un paso más allá: qué hace cada flag y modificador en combinación.",
+  questions:[
+    { type:"mc", cat:"ip", q:"¿Qué hace <code>ip a show eth0</code>?",
+      opts:["Muestra la configuración de red solo de la interfaz eth0","Elimina la interfaz eth0","Reinicia la interfaz eth0","Muestra todas las interfaces excepto eth0"], correct:0,
+      exp:"Agregar el nombre de la interfaz al final filtra la salida de <code>ip a</code> mostrando solo esa interfaz." },
+    { type:"mc", cat:"ps", q:"¿Qué diferencia a <code>ps aux</code> de <code>ps -ef</code>?",
+      opts:["Ambos muestran todos los procesos del sistema, con formato de salida distinto (estilo BSD vs UNIX)","ps aux solo muestra procesos del usuario actual","ps -ef solo muestra procesos en background","No hay ninguna relación entre ambos comandos"], correct:0,
+      exp:"Son dos sintaxis históricas (BSD y UNIX System V) para pedir lo mismo: todos los procesos del sistema, con columnas ligeramente distintas." },
+    { type:"mc", cat:"tail", q:"¿Qué hace <code>tail -n 50 archivo.log</code>?",
+      opts:["Muestra las últimas 50 líneas del archivo","Muestra las primeras 50 líneas del archivo","Sigue el archivo en tiempo real durante 50 segundos","Cuenta cuántas líneas tiene el archivo"], correct:0,
+      exp:"<code>-n</code> indica la cantidad de líneas a mostrar; sin él, tail muestra 10 por defecto." },
+    { type:"mc", cat:"tail", q:"¿Qué agrega la opción <code>-f</code> en <code>tail -f archivo.log</code>?",
+      opts:["Sigue el archivo mostrando nuevas líneas en tiempo real","Filtra las líneas que contienen la palabra 'log'","Fuerza la lectura aunque el archivo no exista","Formatea la salida en columnas"], correct:0,
+      exp:"<code>-f</code> (follow) mantiene tail corriendo y muestra cada línea nueva a medida que se agrega al archivo — muy usado para seguir logs en vivo." },
+    { type:"mc", cat:"top", q:"¿Qué hace <code>top -o %CPU</code>?",
+      opts:["Ordena los procesos por uso de CPU, de mayor a menor","Muestra solo procesos con 0% de CPU","Limita top a mostrar 100 procesos","Cambia la salida a formato CSV"], correct:0,
+      exp:"<code>-o</code> define la columna de ordenamiento; con <code>%CPU</code>, los procesos que más consumen aparecen primero." },
+    { type:"mc", cat:"netstat", q:"En <code>netstat -tupln</code>, ¿qué controla específicamente la <code>-l</code>?",
+      opts:["Muestra solo los sockets en estado de escucha (listening)","Resuelve los nombres de dominio","Muestra solo conexiones UDP","Limita la salida a 10 líneas"], correct:0,
+      exp:"<code>-l</code> filtra mostrando únicamente los sockets que están escuchando conexiones entrantes." },
+    { type:"mc", cat:"du", q:"¿Qué hace <code>du -sh --exclude='*.log' /var</code>?",
+      opts:["Resume el uso de disco de /var excluyendo los archivos .log","Elimina todos los archivos .log de /var","Comprime los archivos .log de /var","Muestra solo los archivos .log de /var"], correct:0,
+      exp:"<code>--exclude</code> descarta del cálculo los archivos que coincidan con el patrón indicado." },
+    { type:"mc", cat:"df", q:"¿Qué diferencia a <code>df -h</code> de <code>df -H</code>?",
+      opts:["-h usa potencias de 1024 (KiB/MiB); -H usa potencias de 1000 (KB/MB)","-h muestra solo discos externos; -H solo internos","Son exactamente lo mismo","-H muestra el uso por proceso"], correct:0,
+      exp:"Ambas son \"legibles para humanos\", pero difieren en la base de cálculo: 1024 (binaria) vs 1000 (decimal)." },
+    { type:"mc", cat:"ls", q:"¿Qué agrega <code>-t</code> en <code>ls -lt</code>?",
+      opts:["Ordena los archivos por fecha de modificación, más reciente primero","Ordena los archivos por tamaño","Muestra solo los archivos de texto","Muestra el árbol de directorios"], correct:0,
+      exp:"<code>-t</code> ordena por fecha de modificación; combinado con <code>-l</code> se ve el detalle de cada archivo en ese orden." },
+    { type:"mc", cat:"ls", q:"¿Qué hace <code>ls -R</code>?",
+      opts:["Lista el contenido de un directorio y todos sus subdirectorios, recursivamente","Renombra los archivos listados","Muestra los archivos en orden inverso","Elimina los archivos listados"], correct:0,
+      exp:"<code>-R</code> (recursive) desciende por todos los subdirectorios listando su contenido también." },
+    { type:"mc", cat:"head", q:"¿Qué hace <code>head -c 100 archivo.txt</code>?",
+      opts:["Muestra los primeros 100 bytes del archivo","Muestra las primeras 100 líneas del archivo","Muestra los últimos 100 caracteres del archivo","Cuenta cuántos caracteres tiene el archivo"], correct:0,
+      exp:"<code>-c</code> indica una cantidad de bytes en lugar de líneas." },
+    { type:"mc", cat:"scp", q:"¿Qué hace <code>scp -P 2222 archivo.txt user@host:/tmp/</code>?",
+      opts:["Copia archivo.txt al host remoto usando el puerto SSH 2222","Copia archivo.txt usando 2222 hilos en paralelo","Copia archivo.txt limitando la velocidad a 2222 KB/s","Copia solo los primeros 2222 bytes del archivo"], correct:0,
+      exp:"En <code>scp</code>, la <code>-P</code> mayúscula indica el puerto (a diferencia de <code>ssh</code>, que usa <code>-p</code> minúscula)." },
+    { type:"mc", cat:"paquetes", q:"¿Qué hace <code>apt update &amp;&amp; apt upgrade -y</code>?",
+      opts:["Actualiza el índice de paquetes disponibles y luego actualiza los paquetes instalados sin pedir confirmación","Instala un paquete llamado 'update' y otro llamado 'upgrade'","Elimina todos los paquetes desactualizados","Reinicia el gestor de paquetes"], correct:0,
+      exp:"<code>update</code> refresca la lista de versiones disponibles; <code>upgrade -y</code> instala las actualizaciones confirmando automáticamente (<code>-y</code>)." },
+    { type:"mc", cat:"ssh", q:"¿Qué hace <code>ssh -p 2222 -i ~/.ssh/id_ed25519 admin@10.0.0.5</code>?",
+      opts:["Conecta por SSH al puerto 2222 usando la clave indicada, como el usuario admin","Copia la clave id_ed25519 al servidor 10.0.0.5","Genera una nueva clave SSH en el puerto 2222","Escanea el puerto 2222 del servidor"], correct:0,
+      exp:"Combina <code>-p</code> (puerto), <code>-i</code> (archivo de clave) y el destino <code>usuario@host</code> en una sola conexión." },
+    { type:"mc", cat:"cp", q:"¿Qué agrega <code>-v</code> en <code>cp -rv origen/ destino/</code>?",
+      opts:["Muestra en pantalla cada archivo a medida que se copia (verbose)","Verifica la integridad de los archivos copiados con checksum","Copia solo los archivos visibles, no los ocultos","Comprime los archivos durante la copia"], correct:0,
+      exp:"<code>-v</code> (verbose) imprime el nombre de cada archivo a medida que se procesa, útil para copias grandes." },
+    { type:"mc", cat:"uname", q:"¿Qué diferencia a <code>uname -r</code> de <code>uname -a</code>?",
+      opts:["-r muestra solo la versión del kernel; -a muestra toda la información del sistema","-r muestra el nombre del usuario root; -a el de todos los usuarios","Son exactamente lo mismo","-a muestra solo el hostname"], correct:0,
+      exp:"<code>-r</code> (release) da solo la versión del kernel; <code>-a</code> (all) junta toda la información disponible." },
+    { type:"mc", cat:"editores", q:"En <code>vim</code>, ¿qué combinación guarda los cambios y sale del editor?",
+      opts:[":wq",'Ctrl+S',"Ctrl+X","q!"], correct:0,
+      exp:"<code>:wq</code> en modo comando de vim escribe (write) el archivo y sale (quit)." },
+    { type:"mc", cat:"sudo", q:"¿Qué hace <code>sudo -u postgres psql</code>?",
+      opts:["Ejecuta el comando psql como el usuario postgres, no como root","Le da a psql privilegios de root permanentemente","Crea un nuevo usuario llamado postgres","Cambia la contraseña del usuario postgres"], correct:0,
+      exp:"<code>-u</code> indica bajo qué usuario ejecutar el comando; muy común para correr herramientas de base de datos con el usuario correcto." },
+    { type:"mc", cat:"free", q:"¿Qué unidad usa la salida de <code>free -h</code>?",
+      opts:["La más legible para humanos (KB/MB/GB según corresponda)","Siempre bytes exactos","Siempre gigabytes","Porcentaje del total"], correct:0,
+      exp:"<code>-h</code> (human readable) elige automáticamente la unidad más cómoda de leer para cada valor." },
+    { type:"mc", cat:"tar", q:"¿Qué hace <code>tar -xzvf paquete.tar.gz</code>?",
+      opts:["Extrae (x) un archivo comprimido con gzip (z), mostrando el progreso (v), del archivo indicado (f)","Crea (c) un nuevo archivo tar.gz comprimido","Lista (t) el contenido sin extraer nada","Elimina el archivo tar.gz luego de verificarlo"], correct:0,
+      exp:"Cada letra es un flag: <code>x</code>=extraer, <code>z</code>=gzip, <code>v</code>=verbose, <code>f</code>=archivo indicado a continuación." }
+  ]
+},
+{
+  key:"m3", name:"Módulo 3 — Bash Scripting", short:"Mod.3",
+  desc:"Fundamentos de scripting: shebang, variables, parámetros posicionales, condicionales, funciones y debugging.",
+  questions:[
+    { type:"mc", cat:"Fundamentos", q:"¿Cuál es la primera línea obligatoria de un script Bash?",
+      opts:["#!/bin/bash","#!/usr/env","## bash","chmod +x"], correct:0,
+      exp:"El shebang <code>#!/bin/bash</code> le indica al sistema qué intérprete usar para ejecutar el script." },
+    { type:"mc", cat:"Fundamentos", q:"¿Qué comando le da permisos de ejecución a un script?",
+      opts:["chmod +x miscript.sh","chmod -x miscript.sh","exec miscript.sh","run miscript.sh"], correct:0,
+      exp:"<code>chmod +x</code> agrega el permiso de ejecución al archivo." },
+    { type:"mc", cat:"Fundamentos", q:"¿Cómo se ejecuta un script llamado miscript.sh desde su propio directorio?",
+      opts:["./miscript.sh","miscript.sh","run miscript.sh","exec(miscript.sh)"], correct:0,
+      exp:"Se necesita indicar la ruta (aunque sea relativa con <code>./</code>) porque el directorio actual normalmente no está en el PATH." },
+    { type:"mc", cat:"Variables", q:"¿Cuál de las siguientes definiciones de variable es válida en Bash?",
+      opts:['USUARIO="Estudiante"','USUARIO = "Estudiante"','$USUARIO="Estudiante"','var USUARIO="Estudiante"'], correct:0,
+      exp:"En Bash no puede haber espacios alrededor del signo <code>=</code> al definir una variable." },
+    { type:"mc", cat:"Variables", q:"¿Cómo se lee el valor de una variable llamada USUARIO?",
+      opts:["$USUARIO","USUARIO$","%USUARIO%","&USUARIO"], correct:0,
+      exp:"Se antepone el signo <code>$</code> al nombre de la variable para acceder a su valor." },
+    { type:"mc", cat:"Variables", q:"Dentro de una función, ¿qué hace la palabra clave <code>local</code>?",
+      opts:["Limita el alcance de la variable al cuerpo de la función","Hace la variable visible en todo el sistema","Convierte la variable en constante","Elimina la variable al finalizar el script"], correct:0,
+      exp:"<code>local</code> evita que la variable \"se escape\" y contamine el resto del script." },
+    { type:"mc", cat:"Parámetros", q:"¿Qué contiene la variable especial <code>$0</code>?",
+      opts:["El nombre del script","El primer argumento","El total de argumentos","El código de salida del último comando"], correct:0,
+      exp:"<code>$0</code> siempre es el nombre (o ruta) con el que se invocó el script." },
+    { type:"mc", cat:"Parámetros", q:"¿Qué contiene <code>$#</code>?",
+      opts:["El número total de argumentos pasados al script","El nombre del script","Todos los argumentos como una lista","El PID del script"], correct:0,
+      exp:"<code>$#</code> es la cantidad de parámetros posicionales recibidos." },
+    { type:"mc", cat:"Parámetros", q:"¿Qué contiene <code>$@</code>?",
+      opts:["Todos los argumentos, como una lista","Solo el primer argumento","El código de salida del último comando","El nombre del usuario que ejecuta el script"], correct:0,
+      exp:"<code>$@</code> expande a todos los parámetros posicionales recibidos." },
+    { type:"mc", cat:"Parámetros", q:"¿Qué contiene <code>$?</code>?",
+      opts:["El código de salida del último comando ejecutado","El PID del proceso actual","El primer argumento del script","La cantidad de argumentos"], correct:0,
+      exp:"<code>$?</code> vale 0 si el último comando tuvo éxito, y distinto de 0 si falló." },
+    { type:"mc", cat:"Condicionales", q:"¿Cómo se cierra un bloque <code>if</code> en Bash?",
+      opts:["fi","endif","end","}"], correct:0,
+      exp:"Bash cierra los bloques <code>if</code> con <code>fi</code> (el nombre del bloque al revés)." },
+    { type:"mc", cat:"Condicionales", q:"¿Qué operador compara si dos números son iguales dentro de <code>[ ]</code>?",
+      opts:["-eq","==","-e","="], correct:0,
+      exp:"<code>-eq</code> compara números. <code>==</code> se usa para comparar cadenas de texto." },
+    { type:"mc", cat:"Condicionales", q:"¿Qué operador compara si dos cadenas de texto son iguales dentro de <code>[ ]</code>?",
+      opts:["==","-eq","-e","<>"], correct:0,
+      exp:"<code>==</code> (o <code>=</code>) compara cadenas de texto; para números se usa <code>-eq</code>." },
+    { type:"mc", cat:"Condicionales", q:"¿Qué operador verifica si un archivo o directorio existe?",
+      opts:["-e","-eq","-f","exists"], correct:0,
+      exp:"<code>-e</code> comprueba existencia en general; <code>-f</code> exige además que sea un archivo regular." },
+    { type:"mc", cat:"Condicionales", q:"¿Qué operador verifica si algo es un directorio?",
+      opts:["-d","-f","-e","-dir"], correct:0,
+      exp:"<code>-d</code> comprueba específicamente que la ruta sea un directorio." },
+    { type:"multi", cat:"Funciones", q:"¿Cuáles son formas válidas de declarar una función en Bash?",
+      opts:["function nombre { ... }","nombre() { ... }","def nombre(): ...","func nombre => { ... }"], correct:[0,1],
+      exp:"Bash admite la forma moderna (<code>function nombre { }</code>) y la tradicional (<code>nombre() { }</code>). Las otras dos son sintaxis de otros lenguajes (Python, JS)." },
+    { type:"mc", cat:"Funciones", q:"¿Cómo se llama a una función llamada <code>saludar</code>?",
+      opts:["saludar","saludar()","call saludar","run(saludar)"], correct:0,
+      exp:"En Bash las funciones se invocan escribiendo su nombre, sin paréntesis." },
+    { type:"mc", cat:"Funciones", q:"¿Cómo se \"devuelve\" texto desde una función en Bash?",
+      opts:["Usando echo dentro de la función y capturando la salida con $( )","Usando return \"texto\"","Usando yield \"texto\"","No es posible devolver texto en Bash"], correct:0,
+      exp:"<code>return</code> en Bash solo admite códigos numéricos (0-255); para \"devolver\" texto se usa <code>echo</code> y se captura con <code>$( )</code>." },
+    { type:"mc", cat:"Funciones", q:"Dentro de una función, si se usa <code>$1</code>, ¿a qué se refiere?",
+      opts:["Al primer argumento pasado a la función (independiente del script)","Siempre al primer argumento del script, nunca de la función","Al PID del script","Al nombre de la función"], correct:0,
+      exp:"Las funciones tienen su propio conjunto de parámetros posicionales, independientes de los del script que las llama." },
+    { type:"mc", cat:"Debugging", q:"¿Qué hace <code>set -e</code> colocado después del shebang?",
+      opts:["Detiene el script apenas un comando falla","Imprime cada comando antes de ejecutarlo","Activa el modo verbose de echo","Ejecuta el script en background"], correct:0,
+      exp:"<code>set -e</code> corta la ejecución en cuanto un comando devuelve un código de error, evitando fallos en cascada." },
+    { type:"mc", cat:"Debugging", q:"¿Qué hace <code>bash -x script.sh</code>?",
+      opts:["Imprime cada comando antes de ejecutarlo (modo debug)","Ejecuta el script con permisos elevados","Verifica la sintaxis sin ejecutar el script","Ejecuta el script una sola vez sin loops"], correct:0,
+      exp:"<code>-x</code> es el modo traza: muestra cada comando (precedido de <code>+</code>) justo antes de ejecutarlo." },
+    { type:"mc", cat:"Fundamentos", q:"¿Qué caracter se usa para comentar una línea en Bash?",
+      opts:["#","//","--","/*"], correct:0,
+      exp:"Todo lo que sigue a <code>#</code> en una línea es ignorado por el intérprete." },
+    { type:"type", cat:"Parámetros", q:"¿Qué variable especial contiene el código de salida del último comando? (escribila tal cual, con el símbolo)",
+      accept:["$?"], exp:"<code>$?</code> — el símbolo peso seguido de signo de pregunta." },
+    { type:"type", cat:"Condicionales", q:"¿Con qué palabra se cierra un bloque <code>if</code> en Bash?",
+      accept:["fi"], exp:"<code>fi</code> cierra el bloque abierto con <code>if</code>." },
+    { type:"type", cat:"Condicionales", q:"¿Qué operador de comparación numérica representa \"mayor que\" dentro de <code>[ ]</code>? (escribilo tal cual)",
+      accept:["-gt"], exp:"<code>-gt</code> (greater than) compara si un número es mayor que otro." }
+  ]
+},
+{
+  key:"m4", name:"Módulo 4 — Operadores, Variables y Bucles", short:"Mod.4",
+  desc:"Aritmética con (( )) y $(( )), variables internas, longitud/subcadenas, patrones, valores por defecto y control de flujo con for/while/until/case.",
+  questions:[
+    { type:"type", cat:"Operadores aritméticos", q:"¿Qué operador aritmético representa el módulo (resto de una división)?",
+      accept:["%"], exp:"<code>%</code> devuelve el resto de una división entera." },
+    { type:"type", cat:"Operadores aritméticos", q:"¿Qué operador representa la potencia en Bash?",
+      accept:["**"], exp:"<code>**</code> eleva un número a una potencia, por ejemplo <code>2 ** 10</code> = 1024." },
+    { type:"mc", cat:"Operadores de asignación", q:"¿Qué hace el operador <code>+=</code> sobre una variable?",
+      opts:["Suma un valor y lo acumula en la variable","Compara si dos valores son iguales","Resta un valor de la variable","Convierte la variable en constante"], correct:0,
+      exp:"<code>+=</code> suma el valor de la derecha al valor actual y lo vuelve a guardar en la variable." },
+    { type:"mc", cat:"Operadores de asignación", q:"¿Qué hace <code>(( i++ ))</code>?",
+      opts:["Incrementa i en 1","Decrementa i en 1","Duplica el valor de i","Reinicia i a 0"], correct:0,
+      exp:"<code>++</code> es el operador de incremento; dentro de <code>(( ))</code> se evalúa como expresión aritmética." },
+    { type:"mc", cat:"Operadores lógicos", q:"¿Qué representa <code>&&</code> entre dos condiciones?",
+      opts:["Y lógico: ambas deben ser verdaderas","O lógico: alguna debe ser verdadera","Negación de la condición","Asignación condicional"], correct:0,
+      exp:"<code>&&</code> exige que ambas condiciones se cumplan (equivalente a AND)." },
+    { type:"mc", cat:"Operadores lógicos", q:"¿Qué representa <code>||</code> entre dos condiciones?",
+      opts:["O lógico: alguna debe ser verdadera","Y lógico: ambas deben ser verdaderas","Negación de la condición","Repetición de la condición"], correct:0,
+      exp:"<code>||</code> se cumple si al menos una de las dos condiciones es verdadera (equivalente a OR)." },
+    { type:"mc", cat:"Operadores lógicos", q:"¿Qué hace el operador <code>!</code> antes de una condición?",
+      opts:["Niega el resultado de la condición","Repite la condición dos veces","Compara si el valor es par","Convierte el valor a mayúsculas"], correct:0,
+      exp:"<code>!</code> invierte el resultado: si la condición era verdadera pasa a ser falsa, y viceversa." },
+    { type:"mc", cat:"Aritmética", q:"¿Qué diferencia principal hay entre <code>(( ... ))</code> y <code>$(( ... ))</code>?",
+      opts:["(( )) evalúa la expresión y puede fijar variables; $(( )) se sustituye por el valor resultante","Son exactamente lo mismo en cualquier contexto","(( )) solo sirve para texto; $(( )) solo para números","$(( )) no admite variables, solo números literales"], correct:0,
+      exp:"<code>(( ))</code> ejecuta el cálculo (útil en condiciones y bucles, como <code>(( i++ ))</code>); <code>$(( ))</code> se expande al valor, como en <code>total=$(( 5 * 3 ))</code>." },
+    { type:"mc", cat:"Aritmética", q:"¿Qué imprime <code>echo $(( 2 ** 10 ))</code>?",
+      opts:["1024","20","100","2"], correct:0,
+      exp:"<code>2 ** 10</code> es 2 elevado a la 10, que es 1024." },
+    { type:"mc", cat:"Aritmética", q:"¿Bash admite números decimales (coma flotante) en las expresiones de <code>$(( ))</code>?",
+      opts:["No, Bash solo maneja enteros de 64 bits","Sí, sin ninguna limitación","Solo si se usa declare -f","Solo dentro de funciones"], correct:0,
+      exp:"La aritmética de Bash es exclusivamente entera; para decimales hace falta una herramienta externa como <code>bc</code> o <code>awk</code>." },
+    { type:"type", cat:"Bases numéricas", q:"¿Qué prefijo usa Bash para indicar que un número está en hexadecimal?",
+      accept:["0x"], exp:"El prefijo <code>0x</code> (por ejemplo <code>0x1F</code>) indica hexadecimal en una expresión aritmética." },
+    { type:"mc", cat:"Bases numéricas", q:"¿Cómo interpreta Bash un número que empieza con 0 seguido de dígitos, como <code>0755</code>, dentro de una expresión aritmética?",
+      opts:["Como octal (base 8)","Como hexadecimal","Como binario","Como un error de sintaxis"], correct:0,
+      exp:"Un cero inicial indica base octal; por eso los permisos como 0755 se interpretan en base 8 si se usan en aritmética." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene la variable <code>$HOME</code>?",
+      opts:["La carpeta personal del usuario","El directorio de trabajo actual","Las rutas donde buscar ejecutables","El nombre del equipo"], correct:0,
+      exp:"<code>$HOME</code> apunta a la carpeta personal del usuario que ejecuta el shell." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene la variable <code>$PATH</code>?",
+      opts:["Las rutas donde el shell busca los ejecutables","El directorio de trabajo actual","La carpeta personal del usuario","El PID del proceso padre"], correct:0,
+      exp:"<code>$PATH</code> es la lista de directorios (separados por <code>:</code>) donde el shell busca los comandos que se ejecutan por nombre." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$PWD</code>?",
+      opts:["El directorio de trabajo actual","El directorio anterior","La carpeta personal del usuario","Las rutas donde buscar ejecutables"], correct:0,
+      exp:"<code>$PWD</code> (print working directory) siempre refleja el directorio en el que está parado el shell." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$OLDPWD</code>?",
+      opts:["El directorio en el que se estaba antes del último cd","El directorio actual","El PATH del sistema","El PID del proceso padre"], correct:0,
+      exp:"<code>$OLDPWD</code> guarda el directorio previo, lo que permite volver a él con <code>cd -</code>." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$USER</code>?",
+      opts:["El nombre del usuario que ejecuta el shell","El identificador numérico del usuario","El nombre del equipo","El directorio personal del usuario"], correct:0,
+      exp:"<code>$USER</code> es el nombre (no el número) del usuario actual." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$UID</code>?",
+      opts:["El identificador numérico del usuario actual","El nombre del usuario actual","El nombre del equipo","El PID del proceso padre"], correct:0,
+      exp:"<code>$UID</code> es el número de identificación del usuario (0 para root)." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$HOSTNAME</code>?",
+      opts:["El nombre del equipo","El nombre del usuario actual","El directorio de trabajo actual","El PID del proceso padre"], correct:0,
+      exp:"<code>$HOSTNAME</code> guarda el nombre de host de la máquina." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$PPID</code>?",
+      opts:["El PID del proceso padre","El PID del proceso actual","La cantidad de procesos hijos","El código de salida del proceso padre"], correct:0,
+      exp:"<code>$PPID</code> (parent PID) identifica el proceso que lanzó al proceso actual." },
+    { type:"type", cat:"Variables internas", q:"¿Qué variable interna contiene el separador de campos que usa el shell para dividir palabras?",
+      accept:["$ifs","ifs"], exp:"<code>$IFS</code> (Internal Field Separator) define qué caracteres separan una palabra de otra." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$LINENO</code>?",
+      opts:["El número de línea actual dentro del script","La cantidad total de líneas del script","El número de la última línea con error","El PID de la línea en ejecución"], correct:0,
+      exp:"<code>$LINENO</code> es útil para depurar: indica en qué línea del script se está ejecutando." },
+    { type:"mc", cat:"Variables internas", q:"¿Qué contiene <code>$SECONDS</code>?",
+      opts:["La cantidad de segundos que lleva activo el shell o script","La hora exacta del sistema","El timeout configurado para el script","Los segundos hasta el próximo cron"], correct:0,
+      exp:"<code>$SECONDS</code> arranca en 0 al iniciar el shell/script y se incrementa automáticamente cada segundo." },
+    { type:"mc", cat:"Aleatoriedad", q:"¿En qué rango cae por defecto el valor de <code>$RANDOM</code>?",
+      opts:["Entre 0 y 32767","Entre 0 y 100","Entre 0 y 9","Entre -32768 y 32767"], correct:0,
+      exp:"<code>$RANDOM</code> da un entero pseudoaleatorio entre 0 y 32767 en cada lectura; no sirve para criptografía." },
+    { type:"mc", cat:"Aleatoriedad", q:"¿Qué simula <code>$(( RANDOM % 6 + 1 ))</code>?",
+      opts:["Tirar un dado (número entre 1 y 6)","Un número entre 0 y 6","Siempre el número 6","Un número entre 1 y 32767"], correct:0,
+      exp:"El módulo <code>% 6</code> acota el resultado a 0-5, y sumar 1 lo desplaza al rango 1-6, como un dado." },
+    { type:"mc", cat:"Tipado con declare", q:"¿Qué hace <code>declare -i n</code>?",
+      opts:["Trata la variable n como entero y evalúa aritmética al asignarla","Hace que n sea de solo lectura","Convierte n en un array","Exporta n al entorno de los procesos hijos"], correct:0,
+      exp:"Con <code>-i</code>, asignaciones como <code>n=\"3+4\"</code> se evalúan aritméticamente y n queda en 7." },
+    { type:"mc", cat:"Tipado con declare", q:"¿Qué hace <code>declare -r PI=3.14</code>?",
+      opts:["Vuelve la variable PI de solo lectura (constante)","Convierte PI en un entero","Elimina la variable PI al finalizar el script","Exporta PI a los procesos hijos"], correct:0,
+      exp:"<code>-r</code> (readonly) impide modificar la variable después: un intento de reasignarla da error." },
+    { type:"mc", cat:"Tipado con declare", q:"¿Qué diferencia hay entre <code>declare -a</code> y <code>declare -x</code>?",
+      opts:["-a convierte la variable en arreglo; -x la exporta al entorno de los procesos hijos","Son exactamente lo mismo","-a la hace de solo lectura; -x la convierte en entero","-x convierte en arreglo; -a la exporta"], correct:0,
+      exp:"<code>-a</code> declara un array; <code>-x</code> exporta la variable para que los procesos hijos también la vean." },
+    { type:"mc", cat:"Longitud y subcadenas", q:'Si <code>s="Linux1"</code>, ¿qué imprime <code>echo ${#s}</code>?',
+      opts:["6","5","Linux1","Error"], correct:0,
+      exp:"<code>${#s}</code> da la cantidad de caracteres de la cadena; \"Linux1\" tiene 6." },
+    { type:"mc", cat:"Longitud y subcadenas", q:'Si <code>s="Linux1"</code>, ¿qué imprime <code>echo ${s:0:5}</code>?',
+      opts:["Linux","inux1","Linux1","1"], correct:0,
+      exp:"<code>${s:0:5}</code> toma 5 caracteres a partir del índice 0 (el primero): \"Linux\"." },
+    { type:"mc", cat:"Longitud y subcadenas", q:'Si <code>s="Linux1"</code>, ¿qué imprime <code>echo ${s:5}</code>?',
+      opts:["1","Linux","Linux1","(nada, cadena vacía)"], correct:0,
+      exp:"<code>${s:5}</code> devuelve la subcadena desde el índice 5 hasta el final: solo queda \"1\"." },
+    { type:"mc", cat:"Quitar y reemplazar", q:'Si <code>f="foto.tar.gz"</code>, ¿qué imprime <code>echo ${f%.gz}</code>?',
+      opts:["foto.tar","foto","gz","foto.tar.gz"], correct:0,
+      exp:"<code>%</code> quita la coincidencia más corta desde el final que empiece por lo indicado: solo saca \".gz\"." },
+    { type:"mc", cat:"Quitar y reemplazar", q:'Si <code>f="foto.tar.gz"</code>, ¿qué imprime <code>echo ${f%%.*}</code>?',
+      opts:["foto","foto.tar","foto.tar.gz",".gz"], correct:0,
+      exp:"<code>%%</code> quita la coincidencia MÁS LARGA posible desde el final, eliminando todo a partir del primer punto." },
+    { type:"mc", cat:"Quitar y reemplazar", q:"¿Qué diferencia hay entre <code>${s#patrón}</code> y <code>${s##patrón}</code>?",
+      opts:["# quita la coincidencia más corta desde el inicio; ## quita la más larga","# quita desde el final; ## desde el inicio","Son exactamente lo mismo","## reemplaza en vez de quitar"], correct:0,
+      exp:"Ambos quitan desde el INICIO de la cadena; la diferencia está en si la coincidencia del patrón es la más corta (#) o la más larga (##) posible." },
+    { type:"mc", cat:"Quitar y reemplazar", q:'Si <code>f="foto.tar.gz"</code>, ¿qué imprime <code>echo ${f/foto/img}</code>?',
+      opts:["img.tar.gz","foto.tar.gz","img","imgfoto.tar.gz"], correct:0,
+      exp:"<code>${s/a/b}</code> reemplaza la primera coincidencia de \"a\" por \"b\": \"foto\" pasa a ser \"img\"." },
+    { type:"mc", cat:"Quitar y reemplazar", q:"¿Qué diferencia hay entre <code>${s/a/b}</code> y <code>${s//a/b}</code>?",
+      opts:["/ reemplaza solo la primera coincidencia; // reemplaza todas","/ reemplaza todas; // solo la primera","Son exactamente lo mismo","// elimina en vez de reemplazar"], correct:0,
+      exp:"Duplicar la barra (<code>//</code>) hace que el reemplazo aplique a TODAS las coincidencias, no solo a la primera." },
+    { type:"mc", cat:"Valores por defecto", q:"¿Qué hace <code>${v:-def}</code> si <code>v</code> no está definida o está vacía?",
+      opts:["Devuelve \"def\" sin modificar v","Asigna \"def\" a v de forma permanente","Corta el script con un mensaje de error","Devuelve una cadena vacía siempre"], correct:0,
+      exp:"<code>${v:-def}</code> solo sustituye el valor mostrado; la variable v en sí queda como estaba (sin definir o vacía)." },
+    { type:"mc", cat:"Valores por defecto", q:"¿Qué hace <code>${v:=def}</code> si <code>v</code> no está definida?",
+      opts:["Asigna \"def\" a v y la deja fijada para el resto del script","Solo devuelve \"def\" sin modificar v","Corta el script","No hace nada"], correct:0,
+      exp:"A diferencia de <code>:-</code>, la forma <code>:=</code> además asigna el valor por defecto a la variable." },
+    { type:"mc", cat:"Valores por defecto", q:"¿Qué hace <code>${v:+alt}</code> si <code>v</code> SÍ está definida y no vacía?",
+      opts:["Devuelve \"alt\" en lugar del valor de v","Devuelve el valor de v sin cambios","Asigna \"alt\" a v","Corta el script"], correct:0,
+      exp:"<code>:+</code> es el inverso de <code>:-</code>: solo sustituye por \"alt\" cuando la variable SÍ tiene valor." },
+    { type:"mc", cat:"Valores por defecto", q:"¿Qué hace <code>${v:?msg}</code> si <code>v</code> no está definida?",
+      opts:["Imprime \"msg\" y corta la ejecución del script","Asigna \"msg\" como valor de v","Ignora el error y continúa","Convierte v en solo lectura"], correct:0,
+      exp:"<code>:?</code> obliga a que la variable exista: si no, muestra el mensaje de error indicado y aborta el script." },
+    { type:"mc", cat:"Valores por defecto", q:"¿Qué diferencia hay entre <code>${v:-def}</code> y <code>${v-def}</code> (sin los dos puntos)?",
+      opts:["Sin los dos puntos, solo actúa si v está SIN declarar (no si está vacía)","Son exactamente lo mismo","Sin los dos puntos actúa solo si v está vacía, no si no existe","La versión sin dos puntos no es válida en Bash"], correct:0,
+      exp:"Los dos puntos agregan la condición \"o está vacía\"; sin ellos, la sustitución solo ocurre si la variable nunca fue declarada." },
+    { type:"mc", cat:"Bucle for", q:'¿Qué imprime <code>for i in {1..3}; do echo -n "$i "; done</code>?',
+      opts:["1 2 3","0 1 2","1 2 3 4","3 2 1"], correct:0,
+      exp:"<code>{1..3}</code> genera la secuencia 1, 2, 3; el bucle imprime cada valor seguido de un espacio." },
+    { type:"mc", cat:"Bucle for", q:"¿Qué estilo de bucle es <code>for (( i=0; i<n; i++ ))</code>?",
+      opts:["Estilo C, con inicio, condición y paso numérico","Iteración sobre una lista de palabras","Iteración sobre archivos con globbing","No es una sintaxis válida en Bash"], correct:0,
+      exp:"Esta forma imita el <code>for</code> de C: define la variable inicial, la condición de corte y el paso en cada vuelta." },
+    { type:"mc", cat:"Bucle for", q:"En <code>for f in *.txt; do echo \"$f\"; done</code>, ¿sobre qué itera <code>f</code>?",
+      opts:["Sobre cada archivo del directorio actual que termine en .txt","Sobre cada línea de un archivo .txt","Solo sobre el primer archivo .txt encontrado","Sobre el contenido de todos los .txt concatenados"], correct:0,
+      exp:"El patrón <code>*.txt</code> se expande (globbing) a la lista de archivos que coinciden, y el bucle itera uno por uno." },
+    { type:"mc", cat:"while / until", q:"¿Cuándo se repite un bucle <code>while</code>?",
+      opts:["Mientras la condición sea verdadera (devuelva 0)","Mientras la condición sea falsa","Una sola vez, sin importar la condición","Hasta que el usuario lo interrumpa manualmente"], correct:0,
+      exp:"<code>while</code> vuelve a ejecutar el cuerpo del bucle mientras la condición siga devolviendo éxito (código 0)." },
+    { type:"mc", cat:"while / until", q:"¿Cuándo se repite un bucle <code>until</code>?",
+      opts:["Mientras la condición sea falsa, y corta cuando se vuelve verdadera","Mientras la condición sea verdadera","Siempre exactamente 10 veces","Nunca ejecuta el cuerpo del bucle"], correct:0,
+      exp:"<code>until</code> es lo opuesto a <code>while</code>: repite hasta que la condición finalmente se cumpla." },
+    { type:"mc", cat:"break / continue", q:"¿Qué hace <code>break</code> dentro de un bucle?",
+      opts:["Termina el bucle por completo y continúa después de done","Salta solo la iteración actual y sigue con la próxima","Reinicia el bucle desde el principio","Pausa el script hasta que se presione una tecla"], correct:0,
+      exp:"<code>break</code> corta el bucle de inmediato, sin importar cuántas vueltas quedaban." },
+    { type:"mc", cat:"break / continue", q:"¿Qué hace <code>continue</code> dentro de un bucle?",
+      opts:["Ignora el resto de la iteración actual y pasa a la siguiente","Termina el bucle por completo","Reinicia el contador del bucle","Vuelve a ejecutar la iteración actual"], correct:0,
+      exp:"<code>continue</code> corta solo la vuelta actual y sigue con la siguiente iteración del bucle." },
+    { type:"mc", cat:"break / continue", q:"¿Qué hace <code>break 2</code> dentro de bucles anidados?",
+      opts:["Sale de 2 niveles de bucles anidados a la vez","Sale del bucle 2 veces seguidas (sin efecto adicional)","Espera 2 segundos antes de salir","No es una sintaxis válida en Bash"], correct:0,
+      exp:"El número después de <code>break</code> (o <code>continue</code>) indica sobre cuántos niveles de bucles anidados actúa." },
+    { type:"type", cat:"case / esac", q:"¿Con qué palabra se cierra un bloque <code>case</code> en Bash?",
+      accept:["esac"], exp:"<code>esac</code> cierra el bloque abierto con <code>case</code> (case al revés)." },
+    { type:"type", cat:"case / esac", q:"¿Qué palabra cierra un bucle for, while o until en Bash?",
+      accept:["done"], exp:"Los tres tipos de bucle abren con <code>do</code> y cierran con <code>done</code>." },
+    { type:"mc", cat:"case / esac", q:"¿Cómo termina cada bloque de código dentro de un <code>case</code>?",
+      opts:[";;","break;","end;","}"], correct:0,
+      exp:"Cada patrón termina en <code>)</code> y cada bloque asociado se cierra con <code>;;</code>." },
+    { type:"mc", cat:"case / esac", q:"¿Qué patrón se usa como \"caso por defecto\" en un <code>case</code>?",
+      opts:["*","default","else","_"], correct:0,
+      exp:"El patrón <code>*</code> coincide con cualquier valor no contemplado por los patrones anteriores." },
+    { type:"mc", cat:"case / esac", q:"¿El patrón <code>re*</code> dentro de un <code>case</code> admite comodines de tipo globbing?",
+      opts:["Sí, coincide con cualquier valor que empiece con \"re\", como restart o reload","No, los patrones de case son literales exactos","Solo funciona con expresiones regulares completas","Solo funciona si se usa case -E"], correct:0,
+      exp:"Los patrones de <code>case</code> usan globbing (como en los nombres de archivo), no expresiones regulares." }
+  ]
+},
+{
+  key:"m5", name:"Módulo 5 — Procesos y Trabajos", short:"Mod.5",
+  desc:"PID/PPID/UID y estados, ps y top, señales y trap, trabajos en primer/segundo plano, nohup/disown y prioridad con nice/renice/ionice.",
+  questions:[
+    { type:"mc", cat:"Conceptos", q:"¿Qué identifica de forma única a un proceso en el sistema?",
+      opts:["Su PID (Process ID)","Su nombre de comando","Su usuario dueño","Su directorio de trabajo"], correct:0,
+      exp:"El PID es el identificador numérico único que el kernel asigna a cada proceso." },
+    { type:"mc", cat:"Conceptos", q:"¿Qué es el PPID de un proceso?",
+      opts:["El PID del proceso que lo creó (su padre)","El PID del proceso mismo","La cantidad de procesos hijos que tiene","El identificador del usuario dueño"], correct:0,
+      exp:"Todo proceso (salvo el PID 1) tiene un padre; el PPID es el PID de ese padre." },
+    { type:"type", cat:"Conceptos", q:"¿Qué variable especial de Bash da el PID del propio shell? (escribila tal cual, con el símbolo)",
+      accept:["$$"], exp:"<code>$$</code> es la variable especial que contiene el PID del shell actual." },
+    { type:"type", cat:"Conceptos", q:"¿Qué variable especial de Bash contiene el PID del último proceso lanzado en segundo plano? (escribila tal cual, con el símbolo)",
+      accept:["$!"], exp:"<code>$!</code> guarda el PID del último comando enviado a segundo plano con <code>&</code>." },
+    { type:"mc", cat:"Conceptos", q:"En la columna STAT de <code>ps</code>, ¿qué significa el estado \"Z\"?",
+      opts:["Zombi: terminó pero su padre todavía no leyó su código de salida","En ejecución activa","Durmiendo, esperando un evento","Detenido por una señal"], correct:0,
+      exp:"Un proceso zombi ya terminó su ejecución, pero su entrada sigue en la tabla de procesos hasta que el padre recoge su código de salida." },
+    { type:"mc", cat:"Conceptos", q:"¿Qué significa el estado \"S\" en la columna STAT de <code>ps</code>?",
+      opts:["Durmiendo (sleeping), esperando algún evento","En ejecución activa en CPU","Detenido por una señal","Terminado pero no recolectado"], correct:0,
+      exp:"\"S\" indica que el proceso está inactivo, esperando algo (E/S, una señal, etc.) antes de seguir." },
+    { type:"mc", cat:"Conceptos", q:"¿De qué proceso descienden, en última instancia, todos los procesos del sistema?",
+      opts:["De init o systemd, con PID 1","Del shell bash","Del kernel directamente, sin PID","Del comando ps"], correct:0,
+      exp:"Todo proceso del sistema es, directa o indirectamente, hijo del proceso con PID 1." },
+    { type:"mc", cat:"ps", q:"¿Qué muestra <code>ps aux</code>?",
+      opts:["Todos los procesos del sistema con dueño, %CPU, %MEM, estado y comando","Solo los procesos del usuario actual","Solo los procesos en segundo plano","Solo los procesos con más de 50% de CPU"], correct:0,
+      exp:"<code>ps aux</code> es la forma más común de pedir una foto completa de todos los procesos, con sus columnas más relevantes." },
+    { type:"mc", cat:"ps", q:"¿Qué aporta <code>ps -ef</code> frente a <code>ps aux</code>?",
+      opts:["El formato completo con PID y PPID, mostrando la jerarquía padre-hijo","El uso de memoria en tiempo real","El estado de las señales pendientes","La prioridad nice de cada proceso"], correct:0,
+      exp:"<code>ps -ef</code> (formato UNIX System V) resalta claramente PID y PPID de cada proceso." },
+    { type:"mc", cat:"ps", q:"¿Para qué se usa <code>ps aux | grep respaldo</code>?",
+      opts:["Para filtrar la lista de procesos y encontrar los relacionados con \"respaldo\"","Para matar el proceso llamado respaldo","Para cambiar la prioridad del proceso respaldo","Para ver solo los procesos zombis"], correct:0,
+      exp:"Combinar <code>ps</code> con <code>grep</code> es la forma clásica de buscar un proceso por nombre." },
+    { type:"mc", cat:"ps", q:"¿Qué hace el comando <code>pgrep -a respaldo</code>?",
+      opts:["Busca procesos por nombre y muestra también la línea de comando completa","Mata todos los procesos que coincidan con \"respaldo\"","Cambia la prioridad de los procesos que coincidan con \"respaldo\"","Cuenta cuántos procesos hay en total"], correct:0,
+      exp:"<code>pgrep</code> es un atajo para buscar PIDs por nombre; <code>-a</code> agrega el comando completo a la salida." },
+    { type:"mc", cat:"ps", q:"¿Qué columna de <code>ps aux</code> indica el porcentaje de memoria RAM que usa un proceso?",
+      opts:["%MEM","%CPU","STAT","PID"], correct:0,
+      exp:"<code>%MEM</code> muestra qué porción de la memoria total del sistema ocupa ese proceso." },
+    { type:"mc", cat:"top", q:"¿Qué característica distingue a <code>top</code> de <code>ps</code>?",
+      opts:["top se actualiza en vivo y ordena dinámicamente por consumo","top solo muestra procesos zombis","top no puede filtrarse ni ordenarse","top requiere permisos de root siempre"], correct:0,
+      exp:"A diferencia de la \"foto\" de <code>ps</code>, <code>top</code> refresca su vista cada pocos segundos." },
+    { type:"mc", cat:"top", q:"¿Qué tecla se usa para salir de <code>top</code>?",
+      opts:["q","Ctrl-C únicamente","Esc","x"], correct:0,
+      exp:"Presionar <code>q</code> cierra top y vuelve a la terminal." },
+    { type:"mc", cat:"top", q:"¿Qué información adicional al %CPU muestra la cabecera de <code>top</code>?",
+      opts:["El load average y el uso de memoria del sistema entero","Solo la hora del sistema","La lista de usuarios conectados","El espacio libre en disco"], correct:0,
+      exp:"La cabecera de top resume el estado general: tareas totales, carga del sistema (load) y memoria." },
+    { type:"mc", cat:"top", q:"¿Qué hace <code>top -b -n1</code>?",
+      opts:["Da una salida fija (batch), útil para filtrar o guardar en un script","Actualiza top cada 1 segundo indefinidamente","Muestra solo el proceso con PID 1","Ordena los procesos por PID en vez de por CPU"], correct:0,
+      exp:"El modo batch (<code>-b</code>) con una sola iteración (<code>-n1</code>) permite usar top dentro de scripts, sin su interfaz interactiva." },
+    { type:"mc", cat:"top", q:"¿Qué herramienta se menciona como alternativa más visual a <code>top</code>?",
+      opts:["htop","pstree","iotop","vmstat"], correct:0,
+      exp:"<code>htop</code> ofrece una interfaz con colores y más interactiva, aunque no siempre viene preinstalada." },
+    { type:"mc", cat:"Señales", q:"¿Qué señal se envía por defecto al usar <code>kill PID</code> (sin número)?",
+      opts:["SIGTERM (15): pide que el proceso cierre de forma ordenada","SIGKILL (9): fuerza el cierre inmediato","SIGSTOP (19): detiene el proceso","SIGCONT (18): lo reanuda"], correct:0,
+      exp:"Sin especificar número, <code>kill</code> envía TERM, dando al proceso la chance de cerrar limpiamente." },
+    { type:"mc", cat:"Señales", q:"¿Por qué conviene probar primero <code>kill -15</code> antes que <code>kill -9</code>?",
+      opts:["TERM permite que el proceso cierre ordenadamente; KILL lo fuerza sin darle chance de limpiar","kill -15 es más rápido que kill -9","kill -9 no funciona en la mayoría de los sistemas","No hay ninguna diferencia real entre ambas"], correct:0,
+      exp:"TERM es capturable: el proceso puede cerrar archivos y limpiar antes de salir. KILL es un último recurso." },
+    { type:"mc", cat:"Señales", q:"¿Qué característica tiene la señal SIGKILL (9)?",
+      opts:["No puede ser ignorada ni capturada por el proceso","Puede ser capturada con trap para limpiar antes de salir","Solo pausa el proceso, no lo termina","Es la señal que envía Ctrl-C"], correct:0,
+      exp:"SIGKILL la maneja directamente el kernel: el proceso no tiene oportunidad de reaccionar." },
+    { type:"mc", cat:"Señales", q:"¿Qué señal envía Ctrl-C a un proceso en primer plano?",
+      opts:["SIGINT (2)","SIGTERM (15)","SIGKILL (9)","SIGHUP (1)"], correct:0,
+      exp:"Ctrl-C es la forma interactiva de mandar SIGINT (interrupt) al proceso en primer plano." },
+    { type:"mc", cat:"Señales", q:"¿Qué representa tradicionalmente la señal SIGHUP (1)?",
+      opts:["Recargar la configuración o \"colgar\" (hangup) al cerrar la terminal","Pausar el proceso","Reanudar un proceso pausado","Terminar el proceso de forma forzada"], correct:0,
+      exp:"Históricamente HUP avisaba que la línea telefónica se \"colgó\"; hoy muchos daemons la usan para recargar su configuración." },
+    { type:"mc", cat:"Señales", q:"¿Qué hace la señal SIGSTOP (19)?",
+      opts:["Detiene el proceso de forma no ignorable (pausa)","Termina el proceso definitivamente","Reanuda un proceso pausado","Recarga la configuración del proceso"], correct:0,
+      exp:"SIGSTOP pausa el proceso sin terminarlo, y al igual que KILL no puede ser ignorada." },
+    { type:"mc", cat:"Señales", q:"¿Qué hace la señal SIGCONT (18)?",
+      opts:["Reanuda un proceso que estaba detenido","Detiene el proceso","Lo termina de forma forzada","Le pide que cierre ordenadamente"], correct:0,
+      exp:"SIGCONT es el complemento de STOP: retoma la ejecución de un proceso pausado." },
+    { type:"mc", cat:"Señales", q:"¿Qué hace el comando <code>pkill respaldo</code>?",
+      opts:["Envía una señal (TERM por defecto) a los procesos cuyo nombre coincide con \"respaldo\"","Busca información sobre el proceso sin afectarlo","Cambia la prioridad del proceso respaldo","Lista todos los procesos del sistema"], correct:0,
+      exp:"<code>pkill</code> combina la búsqueda por nombre de <code>pgrep</code> con el envío de una señal." },
+    { type:"mc", cat:"trap", q:"¿Para qué sirve <code>trap 'accion' SEÑALES</code> en un script?",
+      opts:["Ejecuta \"accion\" automáticamente cuando el script recibe alguna de esas señales","Envía esas señales a otros procesos","Bloquea por completo esas señales sin excepción","Cambia la prioridad del script"], correct:0,
+      exp:"<code>trap</code> asocia una acción de limpieza (o de cualquier tipo) a una o más señales." },
+    { type:"mc", cat:"trap", q:"¿Cuándo se ejecuta el código asociado a <code>trap ... EXIT</code>?",
+      opts:["Siempre que el script termina, sin importar la causa","Solo si el script termina con código 0","Solo si el script es interrumpido con Ctrl-C","Nunca se ejecuta automáticamente"], correct:0,
+      exp:"EXIT es un pseudo-evento de trap que dispara siempre al finalizar el script, sea por éxito, error o señal." },
+    { type:"mc", cat:"trap", q:"¿Cuál es un caso típico de uso de <code>trap</code> en un script de respaldo?",
+      opts:["Borrar un archivo de bloqueo (lock) o temporales aunque el script sea interrumpido","Aumentar la prioridad del proceso","Listar los trabajos en segundo plano","Cambiar el usuario dueño del script"], correct:0,
+      exp:"Con trap se garantiza la limpieza (lock, temporales, conexiones) incluso si el script no llega a su fin normal." },
+    { type:"type", cat:"trap", q:"¿Qué palabra clave de Bash se usa para capturar señales dentro de un script?",
+      accept:["trap"], exp:"<code>trap</code> asocia una acción a una o más señales." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué hace el símbolo <code>&</code> al final de un comando?",
+      opts:["Lo ejecuta en segundo plano, sin bloquear la terminal","Lo repite dos veces","Lo ejecuta con privilegios de root","Lo pausa inmediatamente"], correct:0,
+      exp:"El <code>&</code> lanza el comando como un trabajo en segundo plano y devuelve el control a la terminal de inmediato." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué hace el comando <code>jobs</code>?",
+      opts:["Lista los trabajos en segundo o primer plano de la sesión actual","Mata todos los procesos en segundo plano","Cambia la prioridad de todos los trabajos","Muestra el historial de comandos ejecutados"], correct:0,
+      exp:"<code>jobs</code> muestra los trabajos asociados a la sesión de shell actual, con su número (%1, %2…)." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué hace <code>fg %1</code>?",
+      opts:["Trae el trabajo número 1 al primer plano","Envía el trabajo 1 a segundo plano","Termina el trabajo número 1","Lista los detalles del trabajo 1"], correct:0,
+      exp:"<code>fg</code> (foreground) retoma el control interactivo de un trabajo que estaba en segundo plano o suspendido." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué hace <code>bg %1</code>?",
+      opts:["Continúa el trabajo 1 en segundo plano","Lo trae al primer plano","Lo pausa","Lo elimina de la lista de trabajos"], correct:0,
+      exp:"<code>bg</code> reanuda un trabajo suspendido pero lo deja corriendo en segundo plano en vez de tomar el control de la terminal." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué combinación de teclas suspende el trabajo que está corriendo en primer plano?",
+      opts:["Ctrl-Z","Ctrl-C","Ctrl-D","Ctrl-X"], correct:0,
+      exp:"Ctrl-Z envía SIGTSTP, pausando el proceso para poder retomarlo después con fg o bg." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué hace <code>wait $!</code>?",
+      opts:["Espera a que termine el proceso en segundo plano indicado, antes de continuar","Pausa el script indefinidamente","Mata el proceso en segundo plano","Lo mueve a primer plano"], correct:0,
+      exp:"<code>wait</code> bloquea el script hasta que el proceso indicado (por PID, aquí <code>$!</code>) termina, y deja su código de salida en <code>$?</code>." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué hace <code>kill %1</code>?",
+      opts:["Termina el trabajo número 1 de la sesión","Termina el proceso con PID 1 (systemd)","Lista los trabajos activos","Cambia la prioridad del trabajo 1"], correct:0,
+      exp:"Con el prefijo <code>%</code>, <code>kill</code> interpreta el número como un trabajo de la sesión, no como un PID." },
+    { type:"mc", cat:"Trabajos", q:"En el patrón <code>tar ... &</code> seguido de <code>wait $!</code>, ¿para qué sirve <code>wait $!</code>?",
+      opts:["Para esperar a que tar termine y conocer su código de salida","Para matar el proceso tar inmediatamente","Para cambiarle la prioridad al tar","Para listar los archivos que procesó tar"], correct:0,
+      exp:"Lanzar en segundo plano y luego esperar con <code>wait</code> permite seguir controlando el resultado (éxito o error) del comando." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué representa <code>%1</code> al referirse a un trabajo?",
+      opts:["El número de trabajo (job) dentro de la sesión, no su PID","El PID del proceso","El porcentaje de CPU que usa","El primer argumento del comando"], correct:0,
+      exp:"Los números de trabajo (%1, %2…) son locales a cada sesión de shell, a diferencia del PID que es global al sistema." },
+    { type:"mc", cat:"Trabajos", q:"¿Qué diferencia hay entre el PID y el número de trabajo (%1, %2…)?",
+      opts:["El PID identifica al proceso en todo el sistema; el número de trabajo es local a la sesión de shell","Son exactamente lo mismo","El número de trabajo identifica el proceso en todo el sistema, el PID es local a la sesión","El PID cambia cada vez que se consulta jobs"], correct:0,
+      exp:"Dos sesiones de shell distintas pueden tener cada una un \"%1\" propio, pero cada proceso tiene un único PID en todo el sistema." },
+    { type:"mc", cat:"nohup / disown", q:"¿Qué problema resuelve <code>nohup</code>?",
+      opts:["Evita que el proceso reciba SIGHUP y muera al cerrar la terminal","Evita que el proceso use mucha CPU","Cambia el usuario dueño del proceso","Evita que el proceso escriba logs"], correct:0,
+      exp:"<code>nohup</code> hace que el proceso ignore la señal HUP que normalmente se envía al cerrar la terminal que lo lanzó." },
+    { type:"mc", cat:"nohup / disown", q:"Al ejecutar <code>nohup ./respaldo.sh > log 2>&1 &</code>, ¿por qué se redirige la salida a un archivo?",
+      opts:["Porque sin una terminal a la que escribir, conviene guardar stdout y stderr en un log","Porque nohup lo exige por sintaxis obligatoria","Para que el proceso corra más rápido","Para que el proceso tenga más prioridad"], correct:0,
+      exp:"Al desacoplarse de la terminal, cualquier salida que el proceso genere conviene guardarla en un archivo para poder revisarla después." },
+    { type:"mc", cat:"nohup / disown", q:"¿Qué hace <code>disown</code> sobre un trabajo en segundo plano?",
+      opts:["Lo saca de la lista de trabajos del shell, que deja de controlarlo","Lo mata inmediatamente","Le cambia la prioridad","Lo trae de vuelta al primer plano"], correct:0,
+      exp:"Tras <code>disown</code>, el shell ya no considera ese proceso \"suyo\": no aparece en jobs ni se ve afectado si la sesión se cierra." },
+    { type:"mc", cat:"nohup / disown", q:"¿Qué diferencia hay entre <code>nohup</code> y <code>disown</code>?",
+      opts:["nohup evita la señal SIGHUP; disown saca el trabajo de la lista que gestiona el shell","Son exactamente lo mismo","disown evita SIGHUP; nohup lo saca de la lista de trabajos","nohup solo funciona con procesos en primer plano"], correct:0,
+      exp:"Ambos ayudan a que un proceso sobreviva al cierre de la terminal, pero actúan en capas distintas: una es una señal, la otra es la gestión de trabajos del shell." },
+    { type:"mc", cat:"nice / renice", q:'¿Qué hace <code>nice -n 19 ./respaldo.sh &amp;</code>?',
+      opts:["Lanza el script con la prioridad más baja posible (más \"amable\" con el resto)","Le da al script la prioridad más alta posible","Ejecuta el script con privilegios de root","Ejecuta el script 19 veces"], correct:0,
+      exp:"19 es el valor más alto (menos prioridad) del rango de nice, ideal para tareas que no deben competir por CPU." },
+    { type:"mc", cat:"nice / renice", q:"¿Cuál es el rango de valores de nice en Linux?",
+      opts:["De -20 (máxima prioridad) a 19 (mínima prioridad)","De 0 a 100","De 1 a 10","De -100 a 100"], correct:0,
+      exp:"El rango va de -20 (más prioridad, requiere privilegios) a 19 (menos prioridad, más \"amable\")." },
+    { type:"mc", cat:"nice / renice", q:"¿Qué hace <code>renice</code> a diferencia de <code>nice</code>?",
+      opts:["Cambia la prioridad de un proceso que ya está en marcha, indicando su PID","Solo puede usarse al lanzar un proceso nuevo","Cambia el usuario dueño del proceso","Mata el proceso y lo vuelve a lanzar"], correct:0,
+      exp:"<code>nice</code> fija la prioridad al lanzar el proceso; <code>renice</code> la ajusta \"en caliente\" sobre uno que ya está corriendo." },
+    { type:"mc", cat:"nice / renice", q:"¿Para qué sirve <code>ionice</code>?",
+      opts:["Para ajustar la prioridad de entrada/salida (E/S) a disco de un proceso","Para ajustar la prioridad de CPU de un proceso","Para matar procesos que leen mucho disco","Para ver cuánta memoria usa un proceso"], correct:0,
+      exp:"<code>ionice</code> hace con el acceso a disco lo que <code>nice</code> hace con la CPU — útil en tareas que leen o escriben mucho, como un respaldo." },
+    { type:"mc", cat:"nice / renice", q:"Según la regla general, ¿qué significa un valor de nice más alto?",
+      opts:["El proceso es más \"amable\": cede CPU a los demás con más facilidad","El proceso tiene más prioridad y acapara más CPU","El proceso usa más memoria","El proceso se ejecuta más rápido"], correct:0,
+      exp:"Un nice alto reduce la prioridad real del proceso, dejando más CPU disponible para el resto del sistema." },
+    { type:"type", cat:"nice / renice", q:"¿Qué comando cambia la prioridad de un proceso que ya está corriendo, indicando su PID?",
+      accept:["renice"], exp:"<code>renice</code> ajusta la prioridad \"en caliente\", sin relanzar el proceso." }
+  ]
+}
+];
+
+
+/* ===================== ESTADO ===================== */
+const LETTERS = "ABCDEF";
+/* Baraja las opciones de cada pregunta mc/multi una vez al cargar la página,
+   así la respuesta correcta no queda siempre en la posición A. */
+(function shuffleAllOptions(){
+  function shuffleQ(q){
+    if (q.type !== "mc" && q.type !== "multi") return;
+    const order = q.opts.map((_,i)=>i);
+    for (let i=order.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      const tmp = order[i]; order[i]=order[j]; order[j]=tmp;
+    }
+    const newOpts = order.map(oi => q.opts[oi]);
+    let newCorrect;
+    if (q.type === "multi") {
+      const set = new Set(q.correct);
+      newCorrect = order.map((oi,ni)=> set.has(oi) ? ni : -1).filter(x=>x>=0).sort((a,b)=>a-b);
+    } else {
+      newCorrect = order.indexOf(q.correct);
+    }
+    q.opts = newOpts;
+    q.correct = newCorrect;
+  }
+  MODULES.forEach(m => m.questions.forEach(shuffleQ));
+})();
+
+const state = {}; // por módulo: { qStatus:[], userAns:[] }
+MODULES.forEach(m => { state[m.key] = { qStatus: new Array(m.questions.length).fill(null), userAns: new Array(m.questions.length).fill(null) }; });
+
+let curMod = null;   // key del módulo activo
+let idx = 0;
+let navOpen = false;
+let answeredThisView = false; // si la pregunta actual ya fue resuelta en esta visita (para mostrar feedback)
+
+const homeview = document.getElementById("homeview");
+const backBtn = document.getElementById("backBtn");
+const progress = document.getElementById("progress");
+const qcard = document.getElementById("qcard");
+const qbody = document.getElementById("qbody");
+const tlabel = document.getElementById("tlabel");
+const pbar = document.getElementById("pbar");
+const ptext = document.getElementById("ptext");
+const ppend = document.getElementById("ppend");
+const navToggleBtn = document.getElementById("navtoggle");
+const navToggleTxt = document.getElementById("navtoggletxt");
+const navLegend = document.getElementById("navlegend");
+const navGrid = document.getElementById("navgrid");
+const rcard = document.getElementById("rcard");
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function norm(s){ return String(s).trim().toLowerCase().replace(/\s+/g," "); }
+
+/* ===================== HOME ===================== */
+function renderHome(){
+  curMod = null;
+  backBtn.style.display = "none";
+  progress.style.display = "none";
+  navToggleBtn.style.display = "none";
+  navLegend.style.display = "none";
+  navGrid.classList.remove("open");
+  qcard.style.display = "none";
+  rcard.classList.remove("show");
+
+  let html = "";
+  MODULES.forEach((m, i) => {
+    const st = state[m.key];
+    const total = m.questions.length;
+    const ok = st.qStatus.filter(s=>s==='ok').length;
+    const no = st.qStatus.filter(s=>s==='no').length;
+    const flag = st.qStatus.filter(s=>s==='flag').length;
+    const started = ok+no+flag > 0;
+    html += '<div class="modcard">' +
+            '<div class="mhead"><span class="modnum">' + (i+1) + '</span><span class="modtitle">' + esc(m.name.replace(/^Módulo \d+ — /,"")) + '</span></div>' +
+            '<div class="moddesc">' + esc(m.desc) + '</div>' +
+            '<div class="modmeta"><span><b>' + total + '</b> preguntas</span>' +
+            (started ? '<span>✔ <b>' + ok + '</b> · ✘ <b>' + no + '</b> · ⚑ <b>' + flag + '</b></span>' : '<span>Sin empezar</span>') + '</div>' +
+            '<div class="modfoot"><button type="button" class="btn primary" data-mod="' + m.key + '">' + (started ? "Continuar →" : "Practicar →") + '</button></div>' +
+            '</div>';
+  });
+  homeview.innerHTML = html;
+  [...homeview.querySelectorAll("[data-mod]")].forEach(b => b.addEventListener("click", () => enterModule(b.dataset.mod)));
+}
+backBtn.addEventListener("click", renderHome);
+
+/* ===================== ENTRAR A UN MÓDULO ===================== */
+function enterModule(key){
+  curMod = key;
+  const st = state[key];
+  // arrancar en la primer pregunta pendiente (sin ver o marcada), o en 0 si ya está todo resuelto
+  let start = st.qStatus.findIndex(s => s===null || s==='flag');
+  idx = start >= 0 ? start : 0;
+  answeredThisView = false;
+
+  homeview.innerHTML = "";
+  backBtn.style.display = "";
+  progress.style.display = "flex";
+  navToggleBtn.style.display = "";
+  navLegend.style.display = "flex";
+  qcard.style.display = "";
+  rcard.classList.remove("show");
+  buildNavGrid();
+  render();
+}
+
+/* ===================== NAVEGADOR ===================== */
+function buildNavGrid(){
+  const m = MODULES.find(x=>x.key===curMod);
+  let html = "";
+  for (let i=0;i<m.questions.length;i++){
+    html += '<button type="button" class="navcell" data-i="' + i + '">' + (i+1) + '</button>';
+  }
+  navGrid.innerHTML = html;
+  [...navGrid.querySelectorAll(".navcell")].forEach(c => c.addEventListener("click", () => {
+    idx = +c.dataset.i;
+    answeredThisView = false;
+    render();
+  }));
+  updateNavGrid();
+}
+function updateNavGrid(){
+  const m = MODULES.find(x=>x.key===curMod);
+  const st = state[curMod];
+  const pend = st.qStatus.filter(s=>s===null||s==='flag').length;
+  navToggleTxt.textContent = "Ver todas las preguntas (" + pend + " pendientes)";
+  ppend.textContent = pend + " pendiente" + (pend===1?"":"s");
+  [...navGrid.querySelectorAll(".navcell")].forEach((c,i) => {
+    c.className = "navcell" + (st.qStatus[i] ? " " + st.qStatus[i] : "") + (i===idx ? " current" : "");
+  });
+}
+navToggleBtn.addEventListener("click", () => {
+  navOpen = !navOpen;
+  navToggleBtn.classList.toggle("open", navOpen);
+  navGrid.classList.toggle("open", navOpen);
+});
+
+function firstPendingAfter(i, n){
+  for (let step=1; step<=n; step++){
+    const k = (i+step)%n;
+    const s = state[curMod].qStatus[k];
+    if (s===null || s==='flag') return k;
+  }
+  return -1;
+}
+
+/* ===================== RENDER PREGUNTA ===================== */
+function render(){
+  const m = MODULES.find(x=>x.key===curMod);
+  const q = m.questions[idx];
+  const st = state[curMod];
+  const status = st.qStatus[idx];
+  const resolved = status === 'ok' || status === 'no';
+
+  tlabel.textContent = m.short.toLowerCase().replace(".","") + "_" + String(idx+1).padStart(3,"0") + ".sh";
+  ptext.textContent = "[ " + (idx+1) + "/" + m.questions.length + " ]";
+  pbar.style.width = ((idx+1)/m.questions.length*100) + "%";
+  updateNavGrid();
+
+  let html = "";
+  html += '<span class="badge' + (status==='flag' ? ' flagged' : '') + '">' + (status==='flag' ? "⚑ MARCADA" : "PREGUNTA") + ' ' + (idx+1) + "/" + m.questions.length + '</span><span class="cat">' + m.name.replace(/^Módulo \d+ — /,"") + " · " + q.cat + "</span>";
+  html += '<div class="qtext">' + q.q + "</div>";
+
+  if (q.type === "type") {
+    html += '<div class="hint">Escribí el comando (en minúscula, sin modificadores) y presioná Enter o Comprobar.</div>';
+    const prevVal = resolved ? (st.userAns[idx] || "") : "";
+    html += '<div class="typewrap"><input type="text" id="typeInput" autocomplete="off" spellcheck="false" placeholder="comando" value="' + esc(prevVal) + '"' + (resolved ? " disabled" : "") + '>';
+    if (!resolved) html += '<button type="button" class="btn primary" id="checkBtn">Comprobar</button>';
+    html += "</div>";
+  } else {
+    const multi = q.type === "multi";
+    html += '<div class="hint">' + (multi ? "Seleccioná todas las que correspondan." : "Marcá una opción.") + "</div>";
+    html += '<div class="opts" role="group">';
+    q.opts.forEach((o, i) => {
+      html += '<button type="button" class="opt' + (multi ? " multi" : "") + '"' + (resolved ? " disabled" : "") + ' data-i="' + i + '">' +
+              '<span class="let">' + LETTERS[i] + '</span><span class="txt">' + esc(o) + "</span></button>";
+    });
+    html += "</div>";
+  }
+
+  html += '<div class="feed" id="feed"></div>';
+
+  // si ya está resuelta, mostrar el feedback de inmediato
+  html = html; // (se completa feedback + estilos de opciones después de insertar al DOM)
+
+  html += '<div class="actions" id="actionsRow"></div>';
+  qbody.innerHTML = html;
+
+  if (resolved) {
+    showResolvedView(q, status, st.userAns[idx]);
+  }
+
+  wireQuestionInteractions(m, q, st);
+  buildActionsRow(m, q, st, resolved);
+}
+
+function showResolvedView(q, status, ans){
+  const feed = document.getElementById("feed");
+  const ok = status === 'ok';
+  feed.className = "feed show " + (ok ? "good" : "bad");
+  feed.innerHTML = "<b class='tag'>" + (ok ? "✔ Correcta" : "✘ Incorrecta") + "</b><br>" + q.exp;
+
+  if (q.type === "type") {
+    const input = document.getElementById("typeInput");
+    input.classList.add(ok ? "correct" : "wrong");
+    if (!ok) {
+      const acc = document.createElement("div");
+      acc.className = "accepted";
+      acc.textContent = "Válidas: " + q.accept.join(" / ");
+      feed.appendChild(acc);
+    }
+  } else {
+    const optEls = [...qbody.querySelectorAll(".opt")];
+    const correctSet = q.type === "multi" ? new Set(q.correct) : new Set([q.correct]);
+    const pickedSet = new Set(Array.isArray(ans) ? ans : (ans!==null && ans!==undefined ? [ans] : []));
+    optEls.forEach(el => {
+      const i = +el.dataset.i;
+      if (correctSet.has(i)) { el.classList.add("correct"); el.insertAdjacentHTML("beforeend",'<span class="mark ok">✔</span>'); }
+      else if (pickedSet.has(i)) { el.classList.add("wrong"); el.insertAdjacentHTML("beforeend",'<span class="mark no">✘</span>'); }
+      else { el.classList.add("dim"); }
+    });
+  }
+}
+
+function wireQuestionInteractions(m, q, st){
+  const status = st.qStatus[idx];
+  const resolved = status === 'ok' || status === 'no';
+  if (resolved) return;
+
+  if (q.type === "type") {
+    const input = document.getElementById("typeInput");
+    const checkBtn = document.getElementById("checkBtn");
+    const doCheck = () => {
+      const val = input.value;
+      if (!val.trim()) { input.focus(); return; }
+      const ok = q.accept.some(a => norm(a) === norm(val));
+      st.userAns[idx] = val.trim();
+      st.qStatus[idx] = ok ? 'ok' : 'no';
+      input.disabled = true;
+      answeredThisView = true;
+      render();
+    };
+    checkBtn.addEventListener("click", doCheck);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") doCheck(); });
+  } else {
+    const multi = q.type === "multi";
+    const optEls = [...qbody.querySelectorAll(".opt")];
+    if (!multi) {
+      optEls.forEach(el => el.addEventListener("click", () => {
+        const i = +el.dataset.i;
+        st.userAns[idx] = i;
+        st.qStatus[idx] = (i === q.correct) ? 'ok' : 'no';
+        answeredThisView = true;
+        render();
+      }));
+    } else {
+      const picked = new Set();
+      optEls.forEach(el => el.addEventListener("click", () => {
+        const i = +el.dataset.i;
+        if (picked.has(i)) { picked.delete(i); el.classList.remove("picked"); }
+        else { picked.add(i); el.classList.add("picked"); }
+      }));
+      // boton comprobar para multi se agrega en buildActionsRow
+      qbody._pickedSet = picked;
+    }
+  }
+}
+
+function buildActionsRow(m, q, st, resolved){
+  const row = document.getElementById("actionsRow");
+  const status = st.qStatus[idx];
+  const pendCount = st.qStatus.filter(s=>s===null||s==='flag').length;
+  let html = "";
+
+  html += '<button type="button" class="btn" id="prevBtn"' + (idx===0 ? " disabled" : "") + '>← Anterior</button>';
+
+  if (!resolved && q.type === "multi") {
+    html += '<button type="button" class="btn primary" id="checkMultiBtn">Comprobar</button>';
+  }
+  if (!resolved) {
+    html += '<button type="button" class="btn flag" id="flagBtn">' + (status==='flag' ? "⚑ Ya marcada" : "⚑ Marcar y saltar") + '</button>';
+  }
+  html += '<button type="button" class="btn" id="nextBtn"' + (idx===m.questions.length-1 ? " disabled" : "") + '>Siguiente →</button>';
+  html += '<span class="spacer"></span>';
+  if (pendCount > 0) {
+    html += '<button type="button" class="btn primary" id="pendBtn">Pendiente siguiente (' + pendCount + ') →</button>';
+  }
+  html += '<button type="button" class="btn finish" id="finishBtn">Finalizar módulo</button>';
+  row.innerHTML = html;
+
+  const prevBtn = document.getElementById("prevBtn");
+  if (prevBtn) prevBtn.addEventListener("click", () => { idx--; render(); });
+  const nextBtn = document.getElementById("nextBtn");
+  if (nextBtn) nextBtn.addEventListener("click", () => { idx++; render(); });
+  const pendBtn = document.getElementById("pendBtn");
+  if (pendBtn) pendBtn.addEventListener("click", () => {
+    const nxt = firstPendingAfter(idx, m.questions.length);
+    if (nxt >= 0) { idx = nxt; render(); }
+  });
+  const flagBtn = document.getElementById("flagBtn");
+  if (flagBtn && status !== 'flag') flagBtn.addEventListener("click", () => {
+    st.qStatus[idx] = 'flag';
+    const nxt = firstPendingAfter(idx, m.questions.length);
+    idx = nxt >= 0 ? nxt : idx;
+    render();
+  });
+  const checkMultiBtn = document.getElementById("checkMultiBtn");
+  if (checkMultiBtn) checkMultiBtn.addEventListener("click", () => {
+    const picked = qbody._pickedSet || new Set();
+    if (picked.size === 0) return;
+    const arr = [...picked].sort((a,b)=>a-b);
+    const correctArr = q.correct.slice().sort((a,b)=>a-b);
+    const ok = arr.length === correctArr.length && arr.every((v,i)=>v===correctArr[i]);
+    st.userAns[idx] = arr;
+    st.qStatus[idx] = ok ? 'ok' : 'no';
+    render();
+  });
+  document.getElementById("finishBtn").addEventListener("click", () => tryFinish(m));
+}
+
+function tryFinish(m){
+  const st = state[curMod];
+  const pend = st.qStatus.filter(s=>s===null||s==='flag').length;
+  if (pend > 0) {
+    const ok = confirm("Todavía tenés " + pend + " pregunta" + (pend===1?"":"s") + " pendiente" + (pend===1?"":"s") + " (sin ver o marcadas).\n¿Querés ver el resumen igual?");
+    if (!ok) return;
+  }
+  showSummary(m);
+}
+
+/* ===================== RESUMEN DE MÓDULO ===================== */
+function letterList(idxArr, opts){ return idxArr.map(i => LETTERS[i] + ". " + opts[i]).join("<br>"); }
+
+function showSummary(m){
+  const st = state[curMod];
+  qcard.style.display = "none";
+  progress.style.display = "none";
+  navToggleBtn.style.display = "none";
+  navLegend.style.display = "none";
+  navGrid.classList.remove("open");
+  rcard.classList.add("show");
+
+  const ok = st.qStatus.filter(s=>s==='ok').length;
+  const no = st.qStatus.filter(s=>s==='no').length;
+  const pend = st.qStatus.filter(s=>s===null||s==='flag').length;
+  const total = m.questions.length;
+  const answered = ok+no;
+  const pct = answered>0 ? Math.round(ok/answered*100) : 0;
+
+  let html = "";
+  html += '<div style="font-family:var(--mono);font-size:13px;color:var(--mut);margin-bottom:10px">$ ./practica.sh --resumen ' + m.short + '</div>';
+  html += '<div class="score-big">' + ok + '<span class="of"> / ' + answered + ' contestadas</span></div>';
+  html += '<div class="msg">' + msgFor(pct, answered) + '</div>';
+  html += '<div class="statrow">' +
+          '<div class="stat ok"><div class="t">CORRECTAS</div><div class="v">' + ok + '</div></div>' +
+          '<div class="stat no"><div class="t">INCORRECTAS</div><div class="v">' + no + '</div></div>' +
+          '<div class="stat pend"><div class="t">PENDIENTES</div><div class="v">' + pend + '</div></div>' +
+          '</div>';
+
+  html += '<div class="revtitle">Detalle de lo contestado</div><div class="revwrap">';
+  let any = false;
+  m.questions.forEach((q,i) => {
+    const s = st.qStatus[i];
+    if (s!=='ok' && s!=='no') return;
+    any = true;
+    const yourAns = q.type==='type' ? esc(st.userAns[i]) :
+                    q.type==='multi' ? letterList(st.userAns[i], q.opts) :
+                    LETTERS[st.userAns[i]] + ". " + esc(q.opts[st.userAns[i]]);
+    const correctAns = q.type==='type' ? q.accept.join(" / ") :
+                        q.type==='multi' ? letterList(q.correct, q.opts) :
+                        LETTERS[q.correct] + ". " + esc(q.opts[q.correct]);
+    html += '<div class="revrow"><span class="rn">' + (i+1) + '.</span><span class="rq">' + q.q +
+            " <span class='" + (s==='ok'?'mkok':'mkno') + "'>" + (s==='ok'?'✔':'✘') + "</span>" +
+            "<div class='rya'>Tu respuesta: " + yourAns + (s==='no' ? "<br>Correcta: " + correctAns : "") + "</div></span></div>";
+  });
+  if (!any) html += '<div class="revrow"><span class="rq">Todavía no contestaste ninguna pregunta de este módulo.</span></div>';
+  html += "</div>";
+
+  html += '<div class="actions" style="margin-top:20px">' +
+          (pend>0 ? '<button type="button" class="btn primary" id="keepGoing">Seguir practicando (' + pend + ') →</button>' : '') +
+          '<button type="button" class="btn" id="share">Compartir</button>' +
+          '<button type="button" class="btn" id="copy">Copiar</button>' +
+          '<button type="button" class="btn" id="retryMod">Reiniciar módulo</button>' +
+          '<button type="button" class="btn" id="toHome">Volver a módulos</button>' +
+          '<span class="copied" id="copied">copiado ✔</span></div>';
+
+  document.getElementById("rbody").innerHTML = html;
+
+  const text = "Práctica · " + m.name + "\n" + ok + "/" + answered + " correctas (" + pct + "%)\n" +
+               "✔ " + ok + "  ✘ " + no + "  ⚑ pendientes " + pend;
+  const flash = () => { const c = document.getElementById("copied"); c.classList.add("on"); setTimeout(()=>c.classList.remove("on"),1800); };
+  const copy = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash, flash);
+    else { const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); flash(); }
+  };
+  document.getElementById("copy").addEventListener("click", copy);
+  document.getElementById("share").addEventListener("click", () => {
+    if (navigator.share) navigator.share({text}).catch(()=>{}); else copy();
+  });
+  const keepGoing = document.getElementById("keepGoing");
+  if (keepGoing) keepGoing.addEventListener("click", () => {
+    const nxt = firstPendingAfter(-1, m.questions.length);
+    idx = nxt >= 0 ? nxt : 0;
+    rcard.classList.remove("show");
+    progress.style.display = "flex";
+    navToggleBtn.style.display = "";
+    navLegend.style.display = "flex";
+    qcard.style.display = "";
+    render();
+  });
+  document.getElementById("retryMod").addEventListener("click", () => {
+    state[curMod] = { qStatus: new Array(m.questions.length).fill(null), userAns: new Array(m.questions.length).fill(null) };
+    enterModule(curMod);
+  });
+  document.getElementById("toHome").addEventListener("click", renderHome);
+}
+
+function msgFor(pct, answered){
+  if (answered===0) return "Todavía no contestaste nada en este módulo.";
+  if (pct===100) return "¡Perfecto! Todas correctas.";
+  if (pct>=80) return "Muy buen dominio de este módulo.";
+  if (pct>=60) return "Bien encaminado — repasá las que fallaste.";
+  if (pct>=40) return "A mitad de camino, conviene repasar el material.";
+  return "Conviene repasar el módulo antes de seguir.";
+}
+
+renderHome();
+</script>
+</body>
+</html>
