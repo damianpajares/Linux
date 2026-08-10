@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Materiales de Linux — Índice</title>
+<style>
+  :root{
+    --bg:#0D1117; --card:#161B22; --border:#30363D;
+    --txt:#E6EDF3; --mut:#8B949E;
+    --green:#3FB950; --green-soft:#7EE787; --green-bg:#12261A; --green-line:#23492F;
+    --orange:#FFA657; --orange-bg:#2b2010; --orange-line:#5c3d17;
+    --blue:#A5D6FF; --blue-bg:#0d2233; --blue-line:#173a56;
+    --red:#FF7B72; --red-bg:#2D1517; --red-line:#5C2326;
+    --mono:"JetBrains Mono","Cascadia Code",ui-monospace,"Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;
+       display:flex;justify-content:center;padding:28px 16px 70px}
+  .wrap{width:100%;max-width:920px}
+
+  .prompt{font-family:var(--mono);font-size:14px;margin-bottom:6px;word-break:break-all}
+  .prompt .u{color:var(--green)} .prompt .p{color:var(--blue)}
+  h1{font-size:clamp(24px,5vw,36px);font-weight:700;margin:14px 0 6px}
+  .sub{color:var(--mut);font-size:15.5px;line-height:1.5;margin-bottom:28px;max-width:640px}
+
+  /* ---- hero: terminal con árbol del repo ---- */
+  .term{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:34px}
+  .tbar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .tbar .lbl{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .tbody{padding:20px 22px 22px;overflow-x:auto}
+  .treecmd{font-family:var(--mono);font-size:14px;color:var(--green);margin-bottom:14px}
+  .treecmd .arg{color:var(--txt)}
+  pre.tree{font-family:var(--mono);font-size:13.5px;line-height:1.85;white-space:pre;color:var(--mut)}
+  pre.tree .dir{color:var(--blue);font-weight:700}
+  .tree a{color:inherit;text-decoration:none;border-bottom:1px dashed transparent;transition:border-color .12s,color .12s}
+  .tree a.f-pptx{color:var(--orange)}
+  .tree a.f-html{color:var(--green-soft)}
+  .tree a:hover{border-bottom-color:currentColor}
+  .tree .tag{color:var(--mut);font-size:12px}
+  @media (max-width:560px){
+    pre.tree{font-size:12px}
+    .tree .tag{display:none}
+  }
+  .treefoot{margin-top:14px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+
+  /* ---- secciones con tarjetas ---- */
+  .section{margin-bottom:34px}
+  .sechead{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .sechead h2{font-size:18px;font-weight:700}
+  .sechead .path{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+
+  .fcard{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);
+         border-radius:10px;padding:16px 18px;margin-bottom:10px;transition:border-color .15s}
+  .fcard:hover{border-color:var(--mut)}
+  .ficon{flex:0 0 44px;height:44px;border-radius:9px;display:grid;place-items:center;
+         font-family:var(--mono);font-size:11px;font-weight:700}
+  .ficon.pptx{background:var(--orange-bg);border:1px solid var(--orange-line);color:var(--orange)}
+  .ficon.html{background:var(--green-bg);border:1px solid var(--green-line);color:var(--green-soft)}
+  .finfo{flex:1;min-width:0}
+  .fname{font-weight:700;font-size:15.5px}
+  .fdesc{color:var(--mut);font-size:13.5px;margin-top:3px;line-height:1.45}
+  .fmeta{font-family:var(--mono);font-size:12px;color:var(--mut);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+  .fmeta span{display:inline-flex;align-items:center;gap:5px}
+  .badge{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;
+         border-radius:5px;padding:2px 8px;white-space:nowrap}
+  .badge.practica{color:var(--green-soft);background:var(--green-bg);border:1px solid var(--green-line)}
+  .badge.formal{color:var(--red);background:var(--red-bg);border:1px solid var(--red-line)}
+  .badge.eval{color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-line)}
+  .badge.slides{color:var(--orange);background:var(--orange-bg);border:1px solid var(--orange-line)}
+  .fopen{flex:0 0 auto;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--txt);
+         background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 16px;
+         text-decoration:none;white-space:nowrap;transition:filter .15s,border-color .15s}
+  .fopen:hover{filter:brightness(1.3);border-color:var(--mut)}
+  @media (max-width:560px){
+    .fcard{flex-direction:column;align-items:stretch}
+    .ficon{margin-bottom:2px}
+    .fopen{width:100%;text-align:center;margin-top:4px}
+  }
+
+  footer{margin-top:10px;font-family:var(--mono);font-size:12.5px;color:var(--mut);line-height:1.7}
+  footer .g{color:var(--green)}
+  footer a{color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt"><span class="u">ariel@linux-materiales</span>:<span class="p">~</span>$ ls -la</div>
+  <h1>Materiales de Linux</h1>
+  <div class="sub">Presentaciones y formularios interactivos para Linux 1, Linux III (systemd) y Redes POSIX &amp; Bash Script — todo en un solo lugar, listo para repasar antes de cada clase o escrito.</div>
+
+  <div class="term">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">repo</span>
+    </div>
+    <div class="tbody">
+      <div class="treecmd">$ tree <span class="arg">-L 2 --dirsfirst</span></div>
+      <pre class="tree"><span class="dir">linux-materiales/</span>
+├── <span class="dir">linux1-bash-scripting/</span>
+│   ├── <a class="f-pptx" href="Bash_Scripting_Linux1.pptx" target="_blank" rel="noopener">Bash_Scripting_Linux1.pptx</a>          <span class="tag">presentación · 10 diapositivas</span>
+│   └── <a class="f-pptx" href="Quiz_Comandos_Linux1.pptx" target="_blank" rel="noopener">Quiz_Comandos_Linux1.pptx</a>           <span class="tag">quiz en diapositivas · 12 preguntas</span>
+├── <span class="dir">aso3-escrito1/</span>
+│   └── <a class="f-html" href="Escrito1_Linux_Evaluacion.html" target="_blank" rel="noopener">Escrito1_Linux_Evaluacion.html</a>      <span class="tag">evaluación web · 21 preguntas</span>
+├── <span class="dir">linux3-systemd-u1/</span>
+│   ├── <a class="f-html" href="Evaluacion_Linux3_U1_100preguntas.html" target="_blank" rel="noopener">Evaluacion_Linux3_U1_100preguntas.html</a>  <span class="tag">práctica · 100 preguntas</span>
+│   └── <a class="f-html" href="Evaluacion_Formal_Linux3_U1.html" target="_blank" rel="noopener">Evaluacion_Formal_Linux3_U1.html</a>        <span class="tag">evaluación formal · 100 preguntas</span>
+└── <span class="dir">redes-posix-bashscript/</span>
+    └── <a class="f-html" href="Practica_Redes_POSIX_BashScript.html" target="_blank" rel="noopener">Practica_Redes_POSIX_BashScript.html</a>    <span class="tag">práctica · 5 módulos · 175 preguntas</span></pre>
+      <div class="treefoot">4 directorios, 6 archivos</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sechead"><h2>Linux 1 — Bash Scripting</h2><span class="path">/linux1-bash-scripting</span></div>
+
+    <div class="fcard">
+      <div class="ficon pptx">PPTX</div>
+      <div class="finfo">
+        <div class="fname">Bash_Scripting_Linux1.pptx</div>
+        <div class="fdesc">Resumen de fundamentos: shebang, permisos de ejecución, variables, parámetros posicionales, condicionales, funciones y debugging (set -e, bash -x).</div>
+        <div class="fmeta"><span class="badge slides">10 diapositivas</span></div>
+      </div>
+      <a class="fopen" href="Bash_Scripting_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="fcard">
+      <div class="ficon pptx">PPTX</div>
+      <div class="finfo">
+        <div class="fname">Quiz_Comandos_Linux1.pptx</div>
+        <div class="fdesc">Quiz interactivo en diapositivas para repasar en clase: pregunta, opciones y respuesta revelada con explicación, comando por comando.</div>
+        <div class="fmeta"><span class="badge slides">27 diapositivas</span><span>12 preguntas</span></div>
+      </div>
+      <a class="fopen" href="Quiz_Comandos_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sechead"><h2>Administración de Sistemas Operativos III</h2><span class="path">/aso3-escrito1</span></div>
+
+    <div class="fcard">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Escrito1_Linux_Evaluacion.html</div>
+        <div class="fdesc">Evaluación web con corrección al instante, basada en el Escrito 1 de ASO III más repaso de comandos de Linux 1. Resultado compartible al final.</div>
+        <div class="fmeta"><span class="badge eval">evaluación</span><span>21 preguntas</span></div>
+      </div>
+      <a class="fopen" href="Escrito1_Linux_Evaluacion.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sechead"><h2>Linux III — Redes y Servicios POSIX (U1 · systemd)</h2><span class="path">/linux3-systemd-u1</span></div>
+
+    <div class="fcard">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Evaluacion_Linux3_U1_100preguntas.html</div>
+        <div class="fdesc">Modo práctica sobre las Clases 1–3 y Laboratorios 1–3 de systemd: PID 1, units, Restart=, timers, cgroups, Type=, journald y diagnóstico. Elegís qué bloques rendir.</div>
+        <div class="fmeta"><span class="badge practica">práctica</span><span>100 preguntas</span></div>
+      </div>
+      <a class="fopen" href="Evaluacion_Linux3_U1_100preguntas.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="fcard">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Evaluacion_Formal_Linux3_U1.html</div>
+        <div class="fdesc">Versión formal del mismo contenido: pide Nombre, Apellido y C.I., penaliza las respuestas incorrectas, permite navegar libremente y entrega un resumen final.</div>
+        <div class="fmeta"><span class="badge formal">evaluación formal</span><span>100 preguntas</span></div>
+      </div>
+      <a class="fopen" href="Evaluacion_Formal_Linux3_U1.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="sechead"><h2>Redes POSIX &amp; Bash Script — ESI CEPT</h2><span class="path">/redes-posix-bashscript</span></div>
+
+    <div class="fcard">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Practica_Redes_POSIX_BashScript.html</div>
+        <div class="fdesc">Sistema de práctica con 5 módulos: comandos Linux, comandos con modificadores, Bash scripting, operadores/variables/bucles, y procesos y trabajos. Incluye modalidad de escribir el comando y sistema de marcar preguntas para repasar después.</div>
+        <div class="fmeta"><span class="badge practica">práctica</span><span>5 módulos</span><span>175 preguntas</span></div>
+      </div>
+      <a class="fopen" href="Practica_Redes_POSIX_BashScript.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+  </div>
+
+  <footer>
+    <span class="g">exit 0</span> — los enlaces asumen que todos los archivos están en la misma carpeta que este index.html.<br>
+    Si organizás el repo en subcarpetas, ajustá los href de arriba para que coincidan con las rutas reales.
+  </footer>
+</div>
+</body>
+</html>
