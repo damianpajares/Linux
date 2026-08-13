@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluación Formal · Linux III — U1</title>
+<style>
+  :root{
+    --bg:#0D1117; --card:#161B22; --border:#30363D;
+    --txt:#E6EDF3; --mut:#8B949E;
+    --green:#3FB950; --green-soft:#7EE787; --green-bg:#12261A; --green-line:#23492F;
+    --orange:#FFA657; --blue:#A5D6FF; --red:#FF7B72; --red-bg:#2D1517; --red-line:#5C2326;
+    --mono:"JetBrains Mono","Cascadia Code",ui-monospace,"Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;
+       display:flex;justify-content:center;padding:24px 16px 60px}
+  .wrap{width:100%;max-width:860px}
+
+  .prompt{font-family:var(--mono);font-size:14px;margin-bottom:6px;word-break:break-all}
+  .prompt .u{color:var(--green)} .prompt .p{color:var(--blue)}
+  h1{font-size:clamp(22px,4.5vw,32px);font-weight:700;margin:14px 0 4px}
+  .sub{color:var(--mut);font-size:15px;margin-bottom:22px}
+
+  .progress{font-family:var(--mono);font-size:13px;color:var(--mut);display:flex;
+            align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .bar{flex:1;min-width:120px;height:8px;background:var(--card);border:1px solid var(--border);
+       border-radius:99px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .35s ease}
+  @media (prefers-reduced-motion:reduce){ .bar>i{transition:none} .card{animation:none!important} }
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+        overflow:hidden;animation:up .3s ease}
+  @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tbar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .tbar .lbl{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .cbody{padding:22px 22px 24px}
+
+  .badge{display:inline-block;font-family:var(--mono);font-size:12.5px;font-weight:700;
+         color:var(--green);background:var(--green-bg);border:1px solid var(--green-line);
+         border-radius:6px;padding:4px 10px;margin-bottom:6px}
+  .cat{font-size:13px;color:var(--mut);margin-left:8px}
+  .pts{float:right;font-family:var(--mono);font-size:12px;color:var(--mut);margin-top:6px}
+  .qtext{font-size:19px;font-weight:700;line-height:1.35;margin:10px 0 6px}
+  .qtext code{font-family:var(--mono);color:var(--green-soft);font-size:.88em;
+              background:var(--bg);padding:2px 6px;border-radius:5px}
+  .hint{font-size:13px;color:var(--mut);font-style:italic;margin-bottom:14px}
+
+  .opts{display:grid;gap:10px;margin-top:8px}
+  .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+       background:var(--bg);border:1px solid var(--border);border-radius:8px;
+       padding:12px 14px;color:var(--txt);font-family:var(--mono);font-size:14px;
+       transition:border-color .15s, background .15s}
+  .opt:hover{border-color:var(--mut)}
+  .opt:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .opt .let{flex:0 0 28px;height:28px;border:1.5px solid var(--orange);border-radius:50%;
+            display:grid;place-items:center;font-weight:700;font-size:12.5px;color:var(--orange)}
+  .opt.multi .let{border-radius:7px}
+  .opt.picked{background:var(--green-bg);border-color:var(--green)}
+  .opt.picked .let{background:var(--green);border-color:var(--green);color:var(--bg)}
+  .opt.picked span.txt{color:var(--green-soft);font-weight:700}
+  .mark{margin-left:auto;font-family:var(--mono);font-weight:700}
+
+  .actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;
+       border-radius:8px;padding:11px 18px;border:1px solid var(--border);
+       background:var(--card);color:var(--txt);transition:filter .15s}
+  .btn:hover{filter:brightness(1.2)}
+  .btn:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .btn.primary{background:var(--green-bg);border-color:var(--green);color:var(--green-soft)}
+  .btn.finish{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .btn.finish.primary{background:var(--green-bg);border-color:var(--green);color:var(--green-soft)}
+  .btn:disabled{opacity:.35;cursor:default;filter:none}
+  .btn.ghost{background:transparent}
+  .spacer{flex:1 1 auto}
+
+  /* ---- start / student form ---- */
+  .startcard .cbody{padding:26px 24px 28px}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+  @media (max-width:520px){.formgrid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field.full{grid-column:1/-1}
+  .field label{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .field input{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+               padding:11px 12px;color:var(--txt);font-family:var(--sans);font-size:15px}
+  .field input:focus{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  .field input.err{border-color:var(--red)}
+  .sectionlbl{font-family:var(--mono);font-size:12.5px;color:var(--mut);margin:2px 0 10px;
+              text-transform:uppercase;letter-spacing:.04em}
+
+  .part-row{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--bg);
+            border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer}
+  .part-row input{width:18px;height:18px;accent-color:var(--green);flex:0 0 auto}
+  .part-row .pi{flex:1}
+  .part-row .pt{font-weight:700;font-size:15px}
+  .part-row .pd{color:var(--mut);font-size:13px;margin-top:2px}
+  .part-row .pc{font-family:var(--mono);color:var(--green-soft);font-size:13px;flex:0 0 auto}
+  .startfoot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;
+             font-family:var(--mono);font-size:13px;color:var(--mut);flex-wrap:wrap;gap:10px}
+  .warn{font-size:12.5px;color:var(--orange);margin-top:8px;display:none}
+  .warn.show{display:block}
+
+  /* ---- navegador de preguntas ---- */
+  .navtoggle{width:100%;text-align:left;background:var(--card);border:1px solid var(--border);
+             border-radius:8px;padding:10px 14px;color:var(--mut);font-family:var(--mono);
+             font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .navtoggle:hover{border-color:var(--mut)}
+  .navtoggle .car{margin-left:auto;transition:transform .15s}
+  .navtoggle.open .car{transform:rotate(180deg)}
+  .navgrid{display:none;grid-template-columns:repeat(10,1fr);gap:6px;margin:-6px 0 14px;
+           background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+  .navgrid.open{display:grid}
+  @media (max-width:520px){.navgrid{grid-template-columns:repeat(8,1fr)}}
+  .navcell{aspect-ratio:1;border:1px solid var(--border);border-radius:5px;background:var(--bg);
+           color:var(--mut);font-family:var(--mono);font-size:11px;cursor:pointer;
+           display:grid;place-items:center;transition:border-color .1s}
+  .navcell:hover{border-color:var(--mut)}
+  .navcell.answered{background:var(--green-bg);border-color:var(--green-line);color:var(--green-soft)}
+  .navcell.current{border-color:var(--orange);border-width:2px;color:var(--orange);font-weight:700}
+
+  /* ---- resultado / resumen ---- */
+  .result{display:none}
+  .result.show{display:block}
+  .rout{font-family:var(--sans);font-size:14px;line-height:1.6;padding:22px}
+  .rhead{font-family:var(--mono);font-size:13px;color:var(--mut);margin-bottom:14px}
+  .rhead b{color:var(--txt)}
+  .score-big{font-family:var(--mono);font-size:clamp(36px,7vw,52px);font-weight:700;color:var(--green);margin:6px 0}
+  .score-big .of{font-size:.42em;color:var(--mut);font-weight:400}
+  .msg{font-size:16px;margin:6px 0 16px;color:var(--txt)}
+  .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  @media (max-width:560px){.statrow{grid-template-columns:1fr 1fr}}
+  .stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .stat .t{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+  .stat .v{font-family:var(--mono);font-size:20px;font-weight:700;margin-top:4px}
+  .stat.ok .v{color:var(--green-soft)} .stat.no .v{color:var(--red)} .stat.blank .v{color:var(--mut)}
+  .penalty{font-family:var(--mono);font-size:13px;color:var(--red);margin-bottom:16px}
+
+  .parts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 18px}
+  @media (max-width:560px){.parts{grid-template-columns:1fr}}
+  .part{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .part .t{font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .part .v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green-soft);margin-top:4px}
+  .part .b{font-family:var(--mono);font-size:11.5px;color:var(--mut);margin-top:2px}
+
+  .revtitle{font-family:var(--mono);font-size:13px;color:var(--mut);margin:18px 0 10px;
+            text-transform:uppercase;letter-spacing:.04em}
+  .revwrap{max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+  .revgroup .revgrouphead{font-family:var(--mono);font-size:12px;color:var(--mut);
+            background:var(--bg);padding:8px 14px;position:sticky;top:0}
+  .revrow{display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-top:1px solid var(--border);
+          font-size:13px}
+  .revrow .rn{font-family:var(--mono);color:var(--mut);flex:0 0 26px}
+  .revrow .rq{flex:1;min-width:0}
+  .revrow .rq .rqtext{color:var(--txt)}
+  .revrow .rq .rya{font-family:var(--mono);font-size:12px;margin-top:3px}
+  .revrow .mkok{color:var(--green)} .revrow .mkno{color:var(--red)} .revrow .mkblank{color:var(--mut)}
+
+  .copied{font-family:var(--mono);font-size:13px;color:var(--green);opacity:0;transition:opacity .2s}
+  .copied.on{opacity:1}
+
+  footer{margin-top:26px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  footer .g{color:var(--green)}
+
+  @media print{
+    body{background:#fff;color:#111;padding:0}
+    .prompt,.progress,.navtoggle,.navgrid,footer,.actions{display:none!important}
+    .card{border:1px solid #ccc;background:#fff;animation:none}
+    .tbar{display:none}
+    .qtext code, .feed code, .rq code{background:#f0f0f0;color:#111}
+    .score-big{color:#111}
+    .revwrap{max-height:none;overflow:visible}
+    .stat .v, .part .v{color:#111}
+    .revrow .mkok{color:#0a7a2f} .revrow .mkno{color:#b3261e}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt"><span class="u">ariel@linux3</span>:<span class="p">~</span>$ ./eval_formal_u1.sh --iniciar</div>
+  <h1>Evaluación Formal · Linux III — U1</h1>
+  <div class="sub">Gestión de Servicios con systemd — Clases 1–3 y Laboratorios 1–3. Las respuestas incorrectas descuentan puntos: respondé solo si estás seguro.</div>
+
+  <!-- START SCREEN -->
+  <div class="card startcard" id="startcard">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">config.sh</span>
+    </div>
+    <div class="cbody" id="startbody"></div>
+  </div>
+
+  <div class="progress" id="progress" style="display:none">
+    <span id="ptext">[ 0/0 ]</span>
+    <div class="bar"><i id="pbar"></i></div>
+    <span id="ppts" title="Respondidas">0 respondidas</span>
+  </div>
+
+  <button type="button" class="navtoggle" id="navtoggle" style="display:none">
+    <span id="navtoggletxt">Ver todas las preguntas</span><span class="car">▾</span>
+  </button>
+  <div class="navgrid" id="navgrid"></div>
+
+  <div class="card" id="qcard" style="display:none">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl" id="tlabel">pregunta.sh</span>
+    </div>
+    <div class="cbody" id="qbody"></div>
+  </div>
+
+  <div class="card result" id="rcard">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">resumen</span>
+    </div>
+    <div class="rout" id="rbody"></div>
+  </div>
+
+  <footer><span class="g">exit 0</span> — Linux III · CTT · U1 Gestión de Servicios con systemd</footer>
+</div>
+
+<script>
+"use strict";
+/* ===================== DATOS ===================== */
+/* type: "single" | "multi"; correct: index | array de índices; pts: puntos */
+const PARTS = [
+{
+  name: "Fundamentos, POSIX y Arranque",
+  short: "Clase 1",
+  desc: "PID 1, proceso/daemon/servicio, capas del sistema, POSIX y secuencia de arranque",
+  questions: [
+    { cat:"PID 1", q:'Al ejecutar <code>ps -p 1</code>, ¿qué comando/binario aparece normalmente?', type:"single", pts:1,
+      opts:["/lib/systemd/systemd","/sbin/init.d","/bin/bash","/usr/bin/kernel"], correct:0,
+      exp:"En sistemas con systemd, el PID 1 es <code>/lib/systemd/systemd</code> (a veces enlazado desde <code>/sbin/init</code>). Es el primer proceso del espacio de usuario." },
+    { cat:"PID 1", q:"En la salida de <code>ps -p 1</code>, ¿por qué el campo TTY muestra un signo de interrogación (?)?", type:"single", pts:1,
+      opts:["Porque el proceso está en background, sin terminal asociada","Porque el sistema tiene un error de configuración","Porque systemd corre en modo gráfico","Porque el usuario no tiene permisos"], correct:0,
+      exp:"El PID 1 no está atado a ninguna terminal: se lanza directamente por el kernel al arrancar, no desde una sesión de shell." },
+    { cat:"PID 1", q:"Si el proceso con PID 1 muere inesperadamente, ¿qué sucede?", type:"single", pts:1,
+      opts:["El sistema entra en kernel panic","El sistema se reinicia solo esa unit","No pasa nada, otro proceso toma su lugar","Se abre una terminal de emergencia automáticamente"], correct:0,
+      exp:"El kernel trata la muerte de PID 1 como un evento catastrófico y provoca un kernel panic, ya que todo el arranque del espacio de usuario depende de ese proceso." },
+    { cat:"PID 1", q:"¿Qué función cumple systemd respecto a los procesos huérfanos?", type:"single", pts:1,
+      opts:["Los adopta (reparenting)","Los elimina automáticamente","Los ignora","Los reinicia con Restart=always"], correct:0,
+      exp:"Cuando un proceso padre muere antes que sus hijos, PID 1 los adopta (reparenting) para que todo proceso tenga siempre un padre válido." },
+    { cat:"Conceptos", q:"Según la definición vista en clase, ¿qué es un proceso?", type:"single", pts:1,
+      opts:["Un programa en ejecución con PID y espacio de memoria propio","Un programa que corre solo en background","Un servicio gestionado por systemd","Una unidad de systemd de tipo .service"], correct:0,
+      exp:"Un proceso es la unidad básica de ejecución: tiene PID y contexto de memoria propio, y lo gestiona el Kernel." },
+    { cat:"Conceptos", q:"¿Qué diferencia a un daemon de un simple proceso?", type:"single", pts:1,
+      opts:["El daemon corre en background, desvinculado de la terminal, esperando peticiones","El daemon siempre tiene PID 1","El daemon no puede tener hijos","El daemon solo existe dentro de contenedores"], correct:0,
+      exp:"Un daemon es un proceso en background desvinculado de la terminal (ejemplos: sshd, nginx). Puede existir sin ser un servicio si se lanza manualmente con &." },
+    { cat:"Conceptos", q:"¿Qué le agrega systemd a un daemon para convertirlo en \"servicio\"?", type:"single", pts:1,
+      opts:["Persistencia, reinicio automático y control de dependencias","Un PID más bajo","Acceso root automático","Nada, daemon y servicio son sinónimos"], correct:0,
+      exp:"Un servicio es un daemon envuelto en políticas de ciclo de vida, dependencias y logs, todo gestionado por el gestor de inicio (systemd)." },
+    { cat:"Conceptos", q:"¿Quién gestiona un proceso a nivel más bajo?", type:"single", pts:1,
+      opts:["El Kernel Linux","systemd","journald","El propio usuario"], correct:0,
+      exp:"El Kernel Linux es quien gestiona los procesos (asigna PID, memoria, tiempo de CPU). systemd gestiona servicios, un nivel de abstracción más arriba." },
+    { cat:"Modelo de capas", q:"En el modelo de capas visto en clase, ¿cuál es el orden correcto de abajo hacia arriba?", type:"single", pts:1,
+      opts:["Hardware → Kernel → Procesos → Daemons → Servicios","Kernel → Hardware → Servicios → Daemons → Procesos","Servicios → Daemons → Procesos → Kernel → Hardware","Hardware → Procesos → Kernel → Servicios → Daemons"], correct:0,
+      exp:"El modelo de capas va de lo físico a lo abstracto: Hardware, luego el Kernel que lo gestiona, luego Procesos, luego Daemons, y finalmente Servicios gobernados por systemd." },
+    { cat:"Modelo de capas", q:"¿Qué gestiona la capa del Kernel según el modelo visto?", type:"single", pts:1,
+      opts:["CPU, memoria, red y dispositivos físicos","Solo la interfaz gráfica","Los unit files de systemd","Los logs del journal"], correct:0,
+      exp:"El Kernel es la capa que gestiona directamente los recursos físicos: CPU, memoria, red y dispositivos." },
+    { cat:"POSIX", q:"¿Qué es POSIX?", type:"single", pts:1,
+      opts:["Un contrato (IEEE 1003) que garantiza interacción predecible con sistemas UNIX-like","Un lenguaje de programación para systemd","Un tipo de unit file","Una distribución de Linux"], correct:0,
+      exp:"POSIX (Portable Operating System Interface, IEEE 1003) define un estándar para que el software interactúe de forma predecible con cualquier sistema tipo UNIX." },
+    { cat:"POSIX", q:"¿Cuáles de las siguientes son syscalls POSIX de gestión de procesos?", type:"multi", pts:2,
+      opts:["fork()", "exec()", "wait()", "open()", "chmod", "kill()"], correct:[0,1,2,5],
+      exp:"<code>fork()</code>, <code>exec()</code>, <code>wait()</code> y <code>kill()</code> son de gestión de procesos. <code>open()</code> es de I/O y sistema de archivos, y <code>chmod</code> es de permisos." },
+    { cat:"POSIX", q:"¿Qué hace la syscall <code>fork()</code>?", type:"single", pts:1,
+      opts:["Duplica un proceso","Reemplaza la imagen del proceso actual","Abre un descriptor de archivo","Envía una señal a otro proceso"], correct:0,
+      exp:"<code>fork()</code> crea una copia (duplicado) del proceso que la invoca. Para reemplazar la imagen del proceso se usa <code>exec()</code>." },
+    { cat:"POSIX", q:"¿Qué hace la syscall <code>exec()</code>?", type:"single", pts:1,
+      opts:["Reemplaza la imagen del proceso actual por otro programa","Duplica el proceso actual","Espera la muerte de un proceso hijo","Cierra un descriptor de archivo"], correct:0,
+      exp:"<code>exec()</code> reemplaza la imagen de memoria del proceso actual con un nuevo programa, sin crear un proceso nuevo." },
+    { cat:"POSIX", q:"¿Cuáles de las siguientes son señales POSIX de terminación de procesos?", type:"multi", pts:2,
+      opts:["SIGTERM","SIGKILL","SIGHUP","read()","close()"], correct:[0,1,2],
+      exp:"SIGTERM (terminación suave), SIGKILL (terminación forzada) y SIGHUP (recarga de configuración) son señales POSIX. <code>read()</code> y <code>close()</code> son syscalls de I/O, no señales." },
+    { cat:"POSIX", q:"¿Qué diferencia hay entre SIGTERM y SIGKILL?", type:"single", pts:1,
+      opts:["SIGTERM permite al proceso terminar de forma ordenada; SIGKILL lo mata de forma forzada e inmediata","Son exactamente lo mismo","SIGTERM solo funciona en root; SIGKILL en cualquier usuario","SIGKILL recarga la configuración del proceso"], correct:0,
+      exp:"SIGTERM es una petición de terminación suave que el proceso puede capturar y manejar; SIGKILL fuerza la terminación inmediata sin posibilidad de limpieza." },
+    { cat:"Secuencia de arranque", q:"¿Cuál es el orden correcto de la secuencia de arranque de un sistema Linux con systemd?", type:"single", pts:1,
+      opts:["BIOS/UEFI → Bootloader (GRUB) → Kernel Linux → systemd (PID 1) → Servicios","systemd → Kernel → GRUB → BIOS → Servicios","Kernel → BIOS → GRUB → Servicios → systemd","Servicios → systemd → Kernel → GRUB → BIOS"], correct:0,
+      exp:"El arranque va de lo físico a lo lógico: BIOS/UEFI inicializa hardware, GRUB carga el kernel, el kernel monta la raíz e inicializa estructuras, y finalmente systemd (PID 1) orquesta el resto de los servicios." },
+    { cat:"Secuencia de arranque", q:"¿Qué hace específicamente el bootloader (GRUB) en la secuencia de arranque?", type:"single", pts:1,
+      opts:["Carga el Kernel Linux en RAM y le pasa parámetros de arranque","Monta el sistema de archivos raíz","Levanta los servicios de red","Inicia el journal de systemd"], correct:0,
+      exp:"GRUB carga el Kernel Linux en memoria RAM y le pasa los parámetros de arranque necesarios antes de cederle el control." },
+    { cat:"Secuencia de arranque", q:"¿Qué hace systemd apenas el Kernel le cede el control del arranque?", type:"single", pts:1,
+      opts:["Lee los targets y levanta los servicios (red, SSH, web, Docker, etc.)","Formatea el disco","Reinicia el sistema automáticamente","Compila el kernel"], correct:0,
+      exp:"Una vez que el Kernel cede el control al espacio de usuario, systemd lee sus targets y orquesta el levantamiento de todos los servicios configurados." },
+    { cat:"Comandos LAB1", q:"¿Qué comando lista los servicios que están corriendo activamente?", type:"single", pts:1,
+      opts:["systemctl list-units --type=service --state=running","systemctl cat","journalctl -u ssh","systemd-analyze blame"], correct:0,
+      exp:"<code>systemctl list-units --type=service --state=running</code> filtra la lista de units mostrando solo los servicios activos en ejecución." },
+    { cat:"Comandos LAB1", q:'¿Qué muestra el comando <code>systemctl cat ssh</code>?', type:"single", pts:1,
+      opts:["El unit file tal como systemd lo carga, incluyendo overrides","Solo los logs recientes del servicio","El PID actual del servicio","El tiempo de arranque del servicio"], correct:0,
+      exp:"<code>systemctl cat</code> muestra el contenido completo del unit file cargado, incluyendo cualquier fragmento de override aplicado." },
+    { cat:"Comandos LAB1", q:'En la salida de <code>systemctl status</code>, ¿qué indica el campo <b>Main PID:</b>?', type:"single", pts:1,
+      opts:["El PID del proceso principal del servicio","La cantidad de reinicios del servicio","El tiempo total de actividad del sistema","El usuario que ejecuta el servicio"], correct:0,
+      exp:'El campo "Main PID:" en <code>systemctl status</code> indica el identificador de proceso (PID) del proceso principal asociado al servicio.' }
+  ]
+},
+{
+  name: "Units Avanzadas, Fallos, Timers y Recursos",
+  short: "Clase 2",
+  desc: "Dependencias entre units, Restart=, crear un servicio propio, timers y límites con cgroups v2",
+  questions: [
+    { cat:"Dependencias", q:"¿Qué efecto tiene la directiva <code>Requires=</code>?", type:"single", pts:1,
+      opts:["Es una dependencia dura: si la unit requerida falla, esta unit también falla","Es una dependencia débil que no afecta si falla","Solo controla el orden de arranque, no la dependencia","Excluye mutuamente a otra unit"], correct:0,
+      exp:"<code>Requires=</code> fuerza una dependencia dura: si la unit requerida falla, la unit que la declara también falla." },
+    { cat:"Dependencias", q:"¿Qué diferencia a <code>Wants=</code> de <code>Requires=</code>?", type:"single", pts:1,
+      opts:["Wants= es una dependencia débil (preferida): si falla la unit deseada, esta unit sigue iniciando igual","Wants= es más estricta que Requires=","Wants= excluye mutuamente a la otra unit","Wants= solo se usa en timers"], correct:0,
+      exp:"<code>Wants=</code> es una dependencia preferida pero no obligatoria: si la unit deseada falla, la unit que declara Wants= continúa iniciando de todas formas." },
+    { cat:"Dependencias", q:"¿Qué controla la directiva <code>After=</code>?", type:"single", pts:1,
+      opts:["El orden de arranque (inicia después de la unit listada), sin implicar dependencia","Fuerza que la unit listada esté activa","Excluye mutuamente a la otra unit","Determina el usuario que ejecuta el servicio"], correct:0,
+      exp:"<code>After=</code> solo controla el orden: la unit inicia después de la listada, pero no implica una dependencia real (para eso se combina con Requires= o Wants=)." },
+    { cat:"Dependencias", q:"¿Qué hace <code>Before=</code>?", type:"single", pts:1,
+      opts:["Orden inverso: la unidad listada espera hasta que esta termine de arrancar","Es idéntica a After=","Fuerza una dependencia dura","Impide que la unit se inicie automáticamente"], correct:0,
+      exp:"<code>Before=</code> es el orden inverso de After=: esta unit debe iniciar primero, y la unidad listada espera a que termine de arrancar." },
+    { cat:"Dependencias", q:"¿Qué efecto tiene <code>Conflicts=</code>?", type:"single", pts:1,
+      opts:["Exclusión mutua: si la unit listada está activa, esta se detiene y viceversa","Obliga a que ambas units corran simultáneamente","Solo afecta el orden de arranque","Reinicia la unit listada automáticamente"], correct:0,
+      exp:"<code>Conflicts=</code> establece exclusión mutua entre dos units: activar una implica detener la otra." },
+    { cat:"Dependencias", q:"¿Cuáles de las siguientes son keywords válidas de dependencias/orden entre units?", type:"multi", pts:2,
+      opts:["Requires=","Wants=","After=","Before=","Conflicts=","RestartSec="], correct:[0,1,2,3,4],
+      exp:"Requires=, Wants=, After=, Before= y Conflicts= son las keywords de dependencias y orden. RestartSec= pertenece a las políticas de reinicio, no a dependencias." },
+    { cat:"Restart=", q:"¿Qué hace <code>Restart=no</code>?", type:"single", pts:1,
+      opts:["Nunca reinicia el servicio; si muere, queda muerto","Reinicia siempre, incluso en salida limpia","Reinicia solo si falla con código distinto de 0","Reinicia solo por watchdog"], correct:0,
+      exp:"<code>Restart=no</code> es el valor por defecto: el servicio nunca se reinicia automáticamente si el proceso termina." },
+    { cat:"Restart=", q:"¿Cuándo reinicia el servicio la opción <code>Restart=on-failure</code>?", type:"single", pts:1,
+      opts:["Cuando el proceso termina con código de salida distinto de 0","Siempre, incluso con salida exitosa","Solo si el watchdog expira","Nunca"], correct:0,
+      exp:"<code>Restart=on-failure</code> reinicia el servicio cuando el proceso termina con un código de salida distinto de 0 (falla). Es la opción recomendada para la mayoría de servicios de producción." },
+    { cat:"Restart=", q:"¿Qué hace <code>Restart=always</code>?", type:"single", pts:1,
+      opts:["Reinicia siempre, incluso en salida limpia (código 0)","Solo reinicia ante fallos","Nunca reinicia","Reinicia solo si hay señal SIGKILL"], correct:0,
+      exp:"<code>Restart=always</code> reinicia el servicio sin importar el motivo de la terminación, incluso si terminó exitosamente (código 0). Se usa en servicios críticos que deben estar siempre activos." },
+    { cat:"Restart=", q:"¿Cuándo reinicia el servicio la opción <code>Restart=on-abnormal</code>?", type:"single", pts:1,
+      opts:["Cuando muere por una señal inesperada (SIGKILL, timeout)","Cuando termina con código de salida 0","Siempre, sin excepción","Nunca"], correct:0,
+      exp:"<code>Restart=on-abnormal</code> reinicia el servicio si muere por una señal anómala como SIGKILL o por timeout." },
+    { cat:"Restart=", q:"¿Para qué sirve <code>RestartSec=10</code>?", type:"single", pts:1,
+      opts:["Espera 10 segundos antes de reiniciar, evitando loops de crash rápidos","Limita el servicio a 10 reinicios totales","Define el timeout de arranque en 10 segundos","Fuerza que el reinicio tarde exactamente 10 segundos en completarse"], correct:0,
+      exp:"<code>RestartSec=</code> define cuántos segundos espera systemd antes de reiniciar el servicio tras una falla, evitando así un loop de reinicios muy rápidos (crash loop)." },
+    { cat:"Restart=", q:"¿Qué limitan <code>StartLimitIntervalSec=60</code> y <code>StartLimitBurst=3</code> juntos?", type:"single", pts:1,
+      opts:["Un máximo de 3 reinicios en una ventana de 60 segundos","El tiempo máximo que puede correr el servicio","El número de procesos hijos del servicio","La cantidad de memoria que puede usar el servicio"], correct:0,
+      exp:"Esta combinación limita a un máximo de 3 reinicios (StartLimitBurst) dentro de una ventana de 60 segundos (StartLimitIntervalSec); si se supera, systemd deja de reintentar." },
+    { cat:"Servicio propio", q:'¿Por qué se crea un usuario de sistema con <code>useradd -r -s /sbin/nologin</code> para correr un servicio?', type:"single", pts:1,
+      opts:["Porque un servicio nunca debe correr como root, y ese usuario no permite login interactivo","Porque systemd lo exige por sintaxis","Para que el servicio tenga más privilegios","Porque así el servicio se reinicia automáticamente"], correct:0,
+      exp:"Es una buena práctica de seguridad: el servicio corre con un usuario de sistema (<code>-r</code>) sin shell interactiva (<code>-s /sbin/nologin</code>), minimizando el daño si el proceso se ve comprometido." },
+    { cat:"Servicio propio", q:"¿Cuándo es obligatorio ejecutar <code>systemctl daemon-reload</code>?", type:"single", pts:1,
+      opts:["Después de crear o modificar un unit file","Cada vez que se reinicia el servicio","Solo la primera vez que se instala systemd","Nunca, se recarga automáticamente"], correct:0,
+      exp:"<code>daemon-reload</code> le indica a systemd que vuelva a leer los unit files desde disco. Es obligatorio después de crear o modificar cualquier unit." },
+    { cat:"Servicio propio", q:"¿Qué hace <code>systemctl enable --now mi-app.service</code> en un solo comando?", type:"single", pts:1,
+      opts:["Habilita el servicio para el arranque y lo inicia inmediatamente","Solo lo habilita, sin iniciarlo","Solo lo inicia, sin habilitarlo para el arranque","Detiene y deshabilita el servicio"], correct:0,
+      exp:"<code>enable --now</code> combina dos acciones: habilita el servicio para que arranque con el sistema (crea el symlink en [Install]) y además lo inicia en el momento." },
+    { cat:"Servicio propio", q:"¿Qué define la directiva <code>WorkingDirectory=</code> en la sección [Service]?", type:"single", pts:1,
+      opts:["El directorio de trabajo desde el cual se ejecuta el proceso del servicio","El directorio donde se guardan los logs","El directorio donde vive el unit file","El directorio home del usuario que corre systemd"], correct:0,
+      exp:"<code>WorkingDirectory=</code> establece el directorio actual de trabajo del proceso al ejecutarse, análogo a hacer <code>cd</code> antes de correr el comando." },
+    { cat:"Servicio propio", q:"¿Cuáles son las tres secciones típicas de un unit file <code>.service</code>?", type:"single", pts:1,
+      opts:["[Unit], [Service], [Install]","[Init], [Run], [Exit]","[Header], [Body], [Footer]","[Config], [Exec], [Log]"], correct:0,
+      exp:"Un unit file de servicio típico tiene tres secciones: [Unit] (metadatos y dependencias), [Service] (cómo ejecutarlo) e [Install] (cómo se habilita)." },
+    { cat:"Servicio propio", q:"¿Qué directiva define el comando principal que ejecuta el servicio?", type:"single", pts:1,
+      opts:["ExecStart=","After=","Restart=","WorkingDirectory="], correct:0,
+      exp:"<code>ExecStart=</code> es la única directiva obligatoria en [Service]: define el comando principal, cuyo proceso se convierte en el Main PID." },
+    { cat:"Timers", q:"¿A qué equivale <code>OnCalendar=daily</code>?", type:"single", pts:1,
+      opts:["Cada día a las 00:00:00","Cada hora","Cada 15 minutos","Una sola vez, al día siguiente"], correct:0,
+      exp:"<code>OnCalendar=daily</code> es un atajo que equivale a ejecutar la unidad todos los días a la medianoche (00:00:00)." },
+    { cat:"Timers", q:"¿Qué significa <code>OnCalendar=*-*-* 02:00:00</code>?", type:"single", pts:1,
+      opts:["Todos los días a las 2 AM","Cada 2 minutos","El día 2 de cada mes","Cada 2 horas"], correct:0,
+      exp:"La sintaxis <code>*-*-* 02:00:00</code> significa: cualquier año-mes-día, a las 02:00:00 — es decir, todos los días a las 2 de la madrugada." },
+    { cat:"Timers", q:"¿Qué asegura <code>Persistent=true</code> en un timer?", type:"single", pts:1,
+      opts:["Si el sistema estuvo apagado y la hora ya pasó, el timer se ejecuta al volver a encender","Que el timer nunca se desactive","Que el servicio asociado corra como root","Que los logs del timer se guarden para siempre"], correct:0,
+      exp:"<code>Persistent=true</code> hace que, si el sistema estuvo apagado durante el horario programado, la ejecución pendiente se dispare apenas el sistema vuelve a encender." },
+    { cat:"Timers", q:"¿Por qué el <code>.service</code> oneshot usado por un timer normalmente NO tiene sección [Install]?", type:"single", pts:1,
+      opts:["Porque es el timer, no el service, quien lo activa","Porque los oneshot no pueden tener [Install]","Porque systemd lo prohíbe por sintaxis","Porque [Install] solo aplica a servicios Type=simple"], correct:0,
+      exp:"El servicio oneshot es disparado por el timer companion (que sí tiene [Install] y WantedBy=timers.target), así que el service no necesita habilitarse por sí mismo." },
+    { cat:"Timers", q:"¿Qué ventaja tienen los timers de systemd sobre cron?", type:"single", pts:1,
+      opts:["Logs integrados con journalctl, dependencias y ejecución diferida con Persistent=true","Son compatibles con cualquier sistema POSIX, incluso sin systemd","Tienen una sintaxis de 5 campos más simple","No requieren unit files"], correct:0,
+      exp:"A diferencia de cron, los timers de systemd heredan logs integrados (journalctl), dependencias (After=, Requires=) y ejecución diferida (Persistent=true)." },
+    { cat:"Timers", q:"¿Qué muestra el comando <code>systemctl list-timers --all</code>?", type:"single", pts:1,
+      opts:["Todos los timers, activos e inactivos, junto con su próxima ejecución","Solo los timers que fallaron","El tiempo total de arranque del sistema","Los logs de todos los timers"], correct:0,
+      exp:"<code>systemctl list-timers --all</code> lista todos los timers del sistema (activos e inactivos) mostrando cuándo se ejecutaron y cuándo se ejecutarán próximamente (NEXT)." },
+    { cat:"cgroups / recursos", q:"¿Qué limita <code>CPUQuota=25%</code>?", type:"single", pts:1,
+      opts:["El porcentaje de CPU total que puede usar el servicio (25% = 1/4 de un núcleo)","La cantidad de RAM disponible","El número de hilos del proceso","La prioridad de acceso a disco"], correct:0,
+      exp:"<code>CPUQuota=25%</code> limita el servicio a usar como máximo el 25% del tiempo de CPU total, equivalente a 1/4 de un núcleo lógico." },
+    { cat:"cgroups / recursos", q:"¿Qué sucede si un servicio supera el límite definido por <code>MemoryMax=</code>?", type:"single", pts:1,
+      opts:["El kernel mata el proceso (OOM Killer)","El servicio se pausa hasta liberar memoria","systemd aumenta el límite automáticamente","No pasa nada, es solo informativo"], correct:0,
+      exp:"<code>MemoryMax=</code> es un límite duro: si el proceso lo supera, el kernel activa el OOM Killer y mata el proceso." },
+    { cat:"cgroups / recursos", q:"¿Qué diferencia a <code>MemoryHigh=</code> de <code>MemoryMax=</code>?", type:"single", pts:1,
+      opts:["MemoryHigh= es un límite blando (presión, sin matar el proceso); MemoryMax= es duro y puede matarlo","Son exactamente lo mismo","MemoryHigh= mata el proceso; MemoryMax= solo avisa","MemoryHigh= aplica a CPU, no a memoria"], correct:0,
+      exp:"<code>MemoryHigh=</code> aplica presión de memoria al proceso sin matarlo (límite blando); <code>MemoryMax=</code> es el límite duro que, si se supera, dispara el OOM Killer." },
+    { cat:"cgroups / recursos", q:"¿Qué previene principalmente la directiva <code>TasksMax=</code>?", type:"single", pts:1,
+      opts:["Fork bombs y exhaustión de PIDs","Fugas de memoria","Uso excesivo de CPU","Escrituras no autorizadas en disco"], correct:0,
+      exp:"<code>TasksMax=</code> limita la cantidad de tareas (procesos + hilos) que puede crear el servicio, evitando fork bombs y el agotamiento de PIDs del sistema." },
+    { cat:"cgroups / recursos", q:"¿Qué hace el comando <code>systemd-cgtop</code>?", type:"single", pts:1,
+      opts:["Monitorea en tiempo real el consumo de recursos por servicio (análogo a htop para cgroups)","Mide el tiempo de arranque del sistema","Lista los timers activos","Verifica la sintaxis de un unit file"], correct:0,
+      exp:"<code>systemd-cgtop</code> es el equivalente a htop pero a nivel de cgroups: muestra en tiempo real el consumo de CPU, memoria y tareas por cada servicio." },
+    { cat:"cgroups / recursos", q:"¿Cuáles de las siguientes directivas limitan recursos vía cgroups v2?", type:"multi", pts:2,
+      opts:["CPUQuota=","MemoryMax=","TasksMax=","IOWeight=","Restart=","After="], correct:[0,1,2,3],
+      exp:"CPUQuota=, MemoryMax=, TasksMax= e IOWeight= son directivas de límites de recursos vía cgroups v2. Restart= y After= no controlan recursos, sino reinicio y orden respectivamente." }
+  ]
+},
+{
+  name: "journald, Type= y Diagnóstico",
+  short: "Clase 3",
+  desc: "Modelo Type=, hooks del ciclo de vida, journald, journalctl avanzado, logrotate y metodología de diagnóstico",
+  questions: [
+    { cat:"Type=", q:"¿Cómo se comporta <code>Type=simple</code>?", type:"single", pts:1,
+      opts:["systemd considera el servicio activo apenas se lanza ExecStart; el proceso no bifurca","systemd espera a que el proceso padre haga fork() y muera","El proceso debe terminar antes de continuar","El proceso avisa explícitamente cuando está listo, vía sd_notify()"], correct:0,
+      exp:"<code>Type=simple</code> es el modelo más directo: en cuanto se lanza ExecStart=, systemd ya considera el servicio activo. El proceso no debe bifurcar (fork)." },
+    { cat:"Type=", q:"¿Qué directiva adicional requiere típicamente <code>Type=forking</code>?", type:"single", pts:1,
+      opts:["PIDFile=","RemainAfterExit=","NotifyAccess=","ExecReload="], correct:0,
+      exp:"En Type=forking el proceso padre hace fork() y muere, y el hijo real es el daemon; systemd necesita <code>PIDFile=</code> para poder rastrear ese proceso hijo." },
+    { cat:"Type=", q:"¿Cómo se comporta <code>Type=oneshot</code>?", type:"single", pts:1,
+      opts:["El proceso termina y systemd espera su salida completa antes de continuar","El proceso queda corriendo indefinidamente en foreground","Requiere PIDFile= obligatoriamente","Espera una señal sd_notify() antes de continuar"], correct:0,
+      exp:"En <code>Type=oneshot</code> el proceso se ejecuta y termina; systemd espera esa salida completa antes de considerar el paso siguiente. Se suele combinar con <code>RemainAfterExit=yes</code>." },
+    { cat:"Type=", q:"¿Cómo funciona <code>Type=notify</code>?", type:"single", pts:1,
+      opts:["El proceso envía una señal explícita vía sd_notify() cuando está listo","systemd asume que está listo apenas se lanza el proceso","Requiere que el proceso haga fork()","Se retrasa hasta que todos los demás jobs terminen"], correct:0,
+      exp:"<code>Type=notify</code> exige que el proceso use la API <code>sd_notify()</code> para avisar explícitamente a systemd cuándo terminó de inicializarse." },
+    { cat:"Type=", q:"¿Cómo se comporta <code>Type=idle</code>?", type:"single", pts:1,
+      opts:["Como simple, pero se retrasa hasta que todos los demás jobs terminen","Termina inmediatamente después de iniciar","Requiere PIDFile=","Nunca se reinicia aunque falle"], correct:0,
+      exp:"<code>Type=idle</code> se comporta como Type=simple, pero systemd retrasa su ejecución hasta que el resto de los jobs de arranque hayan terminado, evitando saturar la consola." },
+    { cat:"Type=", q:"Un servicio con <code>Type=simple</code> lanza un proceso en background con <code>&</code> y termina. ¿Qué problema genera esto?", type:"single", pts:1,
+      opts:["systemd pierde el proceso: el servicio queda \"active (exited)\" en vez de \"running\"","El servicio funciona exactamente igual que con Type=forking","systemd lo reinicia automáticamente cada segundo","No hay ningún problema"], correct:0,
+      exp:"Con Type=simple, el proceso lanzado por ExecStart= debe permanecer en foreground. Si se pone en background con & y el script termina, systemd pierde de vista al proceso real y el servicio queda como \"active (exited)\" quedando huérfano de supervisión." },
+    { cat:"Hooks", q:"¿Qué sucede si <code>ExecStartPre=</code> termina con código de salida distinto de 0?", type:"single", pts:1,
+      opts:["El servicio no llega a iniciar","El servicio inicia igual, ignorando el error","systemd reintenta ExecStartPre= indefinidamente","Se ejecuta ExecStop= automáticamente"], correct:0,
+      exp:"<code>ExecStartPre=</code> se ejecuta antes de ExecStart=; si falla (código ≠ 0), el servicio no llega a iniciar." },
+    { cat:"Hooks", q:"¿Cuándo se ejecuta <code>ExecStartPost=</code>?", type:"single", pts:1,
+      opts:["Después de que ExecStart= retorna, solo si el inicio fue exitoso","Antes de ExecStart=","Al recargar la configuración con systemctl reload","Siempre, incluso si el servicio falló"], correct:0,
+      exp:"<code>ExecStartPost=</code> se ejecuta después de que ExecStart= retorna, y únicamente si el inicio fue exitoso." },
+    { cat:"Hooks", q:"¿Para qué sirve <code>ExecStop=</code>?", type:"single", pts:1,
+      opts:["Define un comando para detener el servicio de forma controlada antes del SIGTERM","Define el comando principal del servicio","Se ejecuta cuando falla ExecStartPre=","Solo aplica a servicios Type=oneshot"], correct:0,
+      exp:"<code>ExecStop=</code> permite definir un comando de apagado controlado (graceful shutdown) que se ejecuta antes de que systemd envíe SIGTERM al proceso." },
+    { cat:"Hooks", q:"¿Cuándo se ejecuta <code>ExecStopPost=</code>?", type:"single", pts:1,
+      opts:["Siempre al terminar, incluso si el servicio falló o fue matado","Solo si el servicio terminó exitosamente","Solo antes de iniciar el servicio","Nunca se ejecuta automáticamente"], correct:0,
+      exp:"<code>ExecStopPost=</code> se ejecuta siempre que el servicio termina, sin importar si fue una parada normal, un fallo, o si el proceso fue matado." },
+    { cat:"Hooks", q:'¿Qué acción dispara la ejecución de <code>ExecReload=</code>?', type:"single", pts:1,
+      opts:["El comando systemctl reload","El comando systemctl restart","El arranque inicial del sistema","Un fallo del proceso"], correct:0,
+      exp:"<code>ExecReload=</code> define el comando que se ejecuta cuando se llama a <code>systemctl reload</code>, recargando la configuración sin reiniciar el proceso (ejemplo típico: <code>kill -HUP $MAINPID</code>)." },
+    { cat:"Hooks", q:"¿Cuáles de las siguientes son directivas de hooks del ciclo de vida en [Service]?", type:"multi", pts:2,
+      opts:["ExecStartPre=","ExecStartPost=","ExecStop=","ExecStopPost=","User=","Restart="], correct:[0,1,2,3],
+      exp:"ExecStartPre=, ExecStartPost=, ExecStop= y ExecStopPost= son hooks del ciclo de vida. User= y Restart= configuran identidad y política de reinicio, no son hooks de ejecución." },
+    { cat:"journald storage", q:"¿Qué implica <code>Storage=volatile</code> en journald.conf?", type:"single", pts:1,
+      opts:["Los logs solo viven en RAM y se pierden al reiniciar el sistema","Los logs se guardan en /var/log/journal/ de forma permanente","Los logs se descartan inmediatamente","Los logs se reenvían solo a syslog"], correct:0,
+      exp:"<code>Storage=volatile</code> guarda los logs en /run/log/journal/ (RAM), por lo que se pierden al reiniciar el sistema." },
+    { cat:"journald storage", q:"¿Dónde se guardan los logs con <code>Storage=persistent</code>?", type:"single", pts:1,
+      opts:["/var/log/journal/, sobreviviendo a los reinicios","/run/log/journal/, solo en RAM","No se guardan en ningún lado","Solo se envían a rsyslog"], correct:0,
+      exp:"<code>Storage=persistent</code> guarda los logs en disco, en /var/log/journal/, y crea el directorio automáticamente si no existe." },
+    { cat:"journald storage", q:"¿Cómo se comporta <code>Storage=auto</code>?", type:"single", pts:1,
+      opts:["Persistente si /var/log/journal existe; volátil si no existe","Siempre persistente, sin excepciones","Siempre volátil","Descarta los logs si el disco está lleno"], correct:0,
+      exp:"<code>Storage=auto</code> (el valor por defecto) es persistente solo si el directorio /var/log/journal ya existe; de lo contrario, se comporta como volátil." },
+    { cat:"journald storage", q:"¿Qué sucede con <code>Storage=none</code>?", type:"single", pts:1,
+      opts:["Los logs se descartan inmediatamente; solo ForwardToSyslog tiene efecto","Los logs se guardan en RAM y disco a la vez","Es equivalente a Storage=persistent","journald deja de funcionar por completo"], correct:0,
+      exp:"Con <code>Storage=none</code> los logs se descartan de inmediato; solo tiene efecto si además se configura ForwardToSyslog=yes para que otro servicio los gestione." },
+    { cat:"journald storage", q:"¿Cómo se activa la persistencia de logs en un servidor que no la tiene por defecto?", type:"single", pts:1,
+      opts:["Creando /var/log/journal y ejecutando systemd-tmpfiles --create","Reiniciando el servicio journald","Ejecutando systemctl daemon-reload","Editando /etc/passwd"], correct:0,
+      exp:"Con <code>sudo mkdir -p /var/log/journal && sudo systemd-tmpfiles --create --prefix /var/log/journal</code> se crea el directorio con los permisos correctos y journald pasa a persistir los logs." },
+    { cat:"journald storage", q:"¿Qué muestra <code>journalctl -b -1</code>?", type:"single", pts:1,
+      opts:["Los logs del boot anterior al actual","Los logs del boot actual","El índice de todos los boots almacenados","Solo los logs con prioridad crítica"], correct:0,
+      exp:"<code>journalctl -b -1</code> muestra los logs del boot inmediatamente anterior al actual (boot -1). <code>journalctl -b</code> sin número muestra el boot actual." },
+    { cat:"journalctl avanzado", q:"¿Qué filtra <code>journalctl -p err</code>?", type:"single", pts:1,
+      opts:["Logs con prioridad error y superior (más crítica)","Solo logs de nivel debug","Todos los logs sin filtrar","Solo logs del boot anterior"], correct:0,
+      exp:"<code>journalctl -p err</code> filtra por prioridad, mostrando los mensajes de nivel error o más críticos (crit, alert, emerg)." },
+    { cat:"journalctl avanzado", q:"¿Qué hace <code>journalctl -u nginx</code>?", type:"single", pts:1,
+      opts:["Filtra los logs mostrando solo los de la unit nginx.service","Muestra los logs de todos los servicios excepto nginx","Elimina los logs de nginx","Reinicia el servicio nginx"], correct:0,
+      exp:"<code>-u</code> filtra por nombre de unidad, mostrando únicamente los logs correspondientes a nginx.service." },
+    { cat:"journalctl avanzado", q:"¿Qué formato produce <code>journalctl -o json-pretty</code>?", type:"single", pts:1,
+      opts:["Salida en formato JSON legible, indentado","Solo el mensaje de texto sin metadata","Timestamps en formato ISO 8601","Formato binario comprimido"], correct:0,
+      exp:"La opción <code>-o json-pretty</code> muestra cada entrada del journal como un objeto JSON indentado y legible, útil para procesar con herramientas como jq." },
+    { cat:"journalctl avanzado", q:'¿Qué logs muestra <code>journalctl --since "1 hour ago"</code>?', type:"single", pts:1,
+      opts:["Los logs generados en la última hora","Los logs de hace exactamente una hora en adelante hasta ahora menos un minuto","Todos los logs del boot actual","Los logs con prioridad warning"], correct:0,
+      exp:'<code>--since "1 hour ago"</code> filtra por tiempo, mostrando los logs generados desde hace una hora hasta el presente.' },
+    { cat:"journalctl avanzado", q:"¿Qué hace <code>journalctl --vacuum-size=500M</code>?", type:"single", pts:1,
+      opts:["Reduce el tamaño del journal en disco hasta 500MB, eliminando entradas antiguas","Aumenta el límite máximo del journal a 500MB","Exporta los últimos 500MB de logs a un archivo","Bloquea el journal para que no crezca más de 500MB en el futuro"], correct:0,
+      exp:"<code>--vacuum-size=500M</code> elimina entradas antiguas del journal hasta que su tamaño en disco quede por debajo de 500MB." },
+    { cat:"journalctl avanzado", q:"¿Qué muestra <code>journalctl --disk-usage</code>?", type:"single", pts:1,
+      opts:["El espacio en disco actualmente usado por el journal","El espacio libre total del disco","La cantidad de servicios activos","El tiempo de arranque del sistema"], correct:0,
+      exp:"<code>--disk-usage</code> reporta cuánto espacio en disco está ocupando el journal actualmente." },
+    { cat:"journald.conf / logrotate", q:"¿Qué controla <code>SystemMaxUse=2G</code> en journald.conf?", type:"single", pts:1,
+      opts:["El tamaño máximo total que puede ocupar el journal en disco","El tamaño máximo de cada archivo de log rotado","El límite de memoria RAM del servicio journald","El número máximo de boots almacenados"], correct:0,
+      exp:"<code>SystemMaxUse=</code> define el tamaño máximo total que el journal puede ocupar en disco; al superarlo, journald borra las entradas más antiguas." },
+    { cat:"journald.conf / logrotate", q:"¿Qué hace <code>ForwardToSyslog=no</code> en journald.conf?", type:"single", pts:1,
+      opts:["Evita que journald reenvíe sus logs a un demonio syslog externo","Elimina todos los logs inmediatamente","Activa la persistencia del journal","Desactiva por completo el journal"], correct:0,
+      exp:"<code>ForwardToSyslog=</code> controla si journald reenvía copias de sus logs a un syslog tradicional (como rsyslog); con \"no\" no los reenvía." },
+    { cat:"journald.conf / logrotate", q:"En un archivo de logrotate, ¿qué hace la directiva <code>rotate 30</code>?", type:"single", pts:1,
+      opts:["Mantiene hasta 30 copias rotadas antes de eliminar las más viejas","Rota los logs cada 30 minutos","Comprime los logs cada 30 días","Elimina los logs después de 30 segundos"], correct:0,
+      exp:"<code>rotate 30</code> indica que logrotate debe conservar hasta 30 copias históricas del archivo de log antes de empezar a eliminar las más antiguas." },
+    { cat:"journald.conf / logrotate", q:"¿Cuál es la diferencia de responsabilidad entre journald y logrotate?", type:"single", pts:1,
+      opts:["journald gestiona su propio journal binario; logrotate gestiona archivos de texto en /var/log/","Son intercambiables y hacen exactamente lo mismo","logrotate gestiona el journal; journald gestiona /var/log/","Ambos gestionan lo mismo y no pueden coexistir"], correct:0,
+      exp:"journald gestiona su propio almacenamiento binario (el journal), mientras que logrotate gestiona archivos de texto plano en /var/log/. Ambos sistemas pueden coexistir sin conflicto." },
+    { cat:"Diagnóstico", q:"En la metodología de diagnóstico de 5 pasos, ¿cuál es el primer paso?", type:"single", pts:1,
+      opts:["Verificar si el servicio existe (Loaded: loaded vs not-found)","Medir el score de seguridad con systemd-analyze security","Revisar los límites de cgroups","Verificar la sintaxis de logrotate"], correct:0,
+      exp:'El primer paso del protocolo es verificar con <code>systemctl status</code> si el servicio existe: buscar "Loaded: loaded" o "Loaded: not-found" — si es not-found, la unit file está ausente o mal nombrada.' },
+    { cat:"Diagnóstico", q:"¿Qué detecta <code>systemd-analyze verify /etc/systemd/system/mi-app.service</code>?", type:"single", pts:1,
+      opts:["Errores de sintaxis y dependencias sin resolver en el unit file","El uso de CPU del servicio","El score de seguridad del servicio","Los logs de error recientes"], correct:0,
+      exp:"<code>systemd-analyze verify</code> analiza estáticamente el unit file y reporta errores de sintaxis o dependencias no resueltas, sin necesidad de arrancar el servicio." }
+  ]
+},
+{
+  name: "Laboratorios Integradores (LAB1–LAB3)",
+  short: "Labs",
+  desc: "Comandos de exploración, hardening aplicado, escenarios reales de fallos y el ecosistema CTT",
+  questions: [
+    { cat:"LAB1", q:"¿Qué comando cuenta cuántos servicios están corriendo activamente?", type:"single", pts:1,
+      opts:['systemctl list-units --type=service --state=running | grep -c "running"',"systemctl cat --count","journalctl --count-services","systemd-analyze --running"], correct:0,
+      exp:"Combinando <code>systemctl list-units</code> con <code>grep -c</code> se puede contar cuántas líneas (servicios) están en estado running." },
+    { cat:"LAB1", q:"¿Qué mide <code>systemd-analyze blame</code>?", type:"single", pts:1,
+      opts:["Un ranking de servicios ordenados por el tiempo que tardaron en iniciar","El tiempo total de arranque del sistema","Los servicios que fallaron en el último boot","El uso de memoria de cada servicio"], correct:0,
+      exp:"<code>systemd-analyze blame</code> genera un ranking de servicios ordenados de mayor a menor según el tiempo que tardó cada uno en inicializarse." },
+    { cat:"LAB1", q:'¿Qué representa la "cadena crítica" mostrada por <code>systemd-analyze critical-chain</code>?', type:"single", pts:1,
+      opts:["La ruta más larga del grafo de dependencias que determina el tiempo mínimo de arranque","La lista de servicios que fallaron","Los servicios con mayor consumo de CPU","Los servicios sin política de reinicio configurada"], correct:0,
+      exp:"La cadena crítica es la secuencia de dependencias más larga que debe completarse antes de terminar el arranque; optimizarla es clave para reducir el tiempo total de boot." },
+    { cat:"LAB1", q:"¿Cuál de los siguientes es el cuello de botella de arranque más común mencionado en clase?", type:"single", pts:1,
+      opts:["NetworkManager-wait-online.service","ssh.service","cron.service","systemd-logind.service"], correct:0,
+      exp:"NetworkManager-wait-online.service suele ser el mayor cuello de botella del arranque (puede sumar ~15s); deshabilitarlo en servidores acelera considerablemente el boot." },
+    { cat:"LAB2 · Hardening", q:"¿Qué previene principalmente <code>NoNewPrivileges=true</code>?", type:"single", pts:1,
+      opts:["Que el proceso o sus hijos escalen privilegios (por ejemplo vía setuid)","Que el proceso use más de 512MB de RAM","Que el proceso acceda a la red","Que el proceso se reinicie automáticamente"], correct:0,
+      exp:"<code>NoNewPrivileges=true</code> bloquea que el proceso (o los que ejecute) puedan obtener privilegios adicionales a los que ya tiene, por ejemplo mediante binarios con bit setuid." },
+    { cat:"LAB2 · Hardening", q:"¿Qué hace <code>ProtectSystem=strict</code>?", type:"single", pts:1,
+      opts:["Monta todo el sistema de archivos como solo lectura para el servicio, excepto las rutas indicadas en ReadWritePaths=","Elimina todos los permisos del usuario root","Desactiva la red para el servicio","Limita la memoria máxima del servicio"], correct:0,
+      exp:"<code>ProtectSystem=strict</code> monta casi todo el árbol de archivos como solo lectura para el servicio; las excepciones de escritura se deben declarar explícitamente con <code>ReadWritePaths=</code>." },
+    { cat:"LAB2 · Hardening", q:"¿Qué hace <code>PrivateTmp=true</code>?", type:"single", pts:1,
+      opts:["Aísla /tmp del servicio en un espacio de nombres privado, invisible para otros procesos","Elimina el contenido de /tmp del sistema al iniciar","Bloquea el acceso del servicio a /tmp por completo","Comparte /tmp entre todos los servicios con hardening"], correct:0,
+      exp:"<code>PrivateTmp=true</code> le da al servicio su propio /tmp aislado, invisible para el resto del sistema, reduciendo el riesgo de interferencia entre procesos." },
+    { cat:"LAB2 · Hardening", q:"Con <code>ProtectSystem=strict</code> activo, ¿por qué suele ser necesario declarar <code>ReadWritePaths=</code>?", type:"single", pts:1,
+      opts:["Porque el resto del sistema queda de solo lectura y el servicio necesita escribir en rutas específicas (logs, datos)","Porque ReadWritePaths= reemplaza a ProtectSystem=","Porque sin ReadWritePaths= el servicio no puede iniciar bajo ningún concepto","Porque activa el modo debug del servicio"], correct:0,
+      exp:"Como ProtectSystem=strict deja casi todo en solo lectura, cualquier ruta donde el servicio necesite escribir (como sus logs) debe declararse explícitamente en <code>ReadWritePaths=</code>." },
+    { cat:"LAB2 · Simulación de fallos", q:"Al matar un servicio con <code>kill -9</code>, ¿qué mensaje característico aparece en journalctl?", type:"single", pts:1,
+      opts:["code=killed, status=9/KILL","code=exited, status=0/SUCCESS","Loaded: not-found","Storage=volatile"], correct:0,
+      exp:"Cuando se mata el proceso con SIGKILL (-9), journalctl registra un mensaje como \"Main process exited, code=killed, status=9/KILL\", seguido del reinicio programado si Restart= está configurado." },
+    { cat:"LAB2 · systemd-analyze security", q:"En la escala de <code>systemd-analyze security</code>, ¿qué significa un score más bajo?", type:"single", pts:1,
+      opts:["Que el servicio está mejor endurecido (más seguro)","Que el servicio tiene más vulnerabilidades","Que el servicio consume menos CPU","Que el servicio arranca más rápido"], correct:0,
+      exp:"La escala va de 0 a 10, donde 0 representa el servicio más seguro (mejor hardening) y 10 el menos seguro. El objetivo típico es lograr un score bajo (< 3 o < 4 según el perfil)." },
+    { cat:"LAB2 · Hardening avanzado", q:"¿Qué hace <code>SystemCallFilter=@system-service</code>?", type:"single", pts:1,
+      opts:["Restringe las syscalls permitidas al conjunto típico de un servicio normal, bloqueando el resto","Permite todas las syscalls sin restricción","Bloquea únicamente las syscalls de red","Desactiva el filtrado de llamadas al sistema"], correct:0,
+      exp:"<code>SystemCallFilter=@system-service</code> aplica un filtro seccomp que permite solo el conjunto de syscalls típico de un servicio normal, reduciendo la superficie de ataque si el proceso es comprometido." },
+    { cat:"LAB2 · Timers", q:"¿Qué significa <code>OnCalendar=*:0/2</code> en un timer de prueba?", type:"single", pts:1,
+      opts:["Se ejecuta cada 2 minutos","Se ejecuta cada 2 horas","Se ejecuta el día 2 de cada mes","Se ejecuta una sola vez, a las 02:00"], correct:0,
+      exp:'La sintaxis <code>*:0/2</code> en el campo de minutos significa "cada 2 minutos, empezando en el minuto 0" — útil para pruebas rápidas de un timer antes de pasarlo a producción con OnCalendar=daily o similar.' },
+    { cat:"LAB2 · Recuperación", q:"Si un servicio con <code>Restart=on-failure</code> y <code>StartLimitBurst=3</code> falla 4 veces en menos de 60 segundos, ¿qué ocurre?", type:"single", pts:1,
+      opts:["systemd deja de reintentar el reinicio automático (supera el límite de arranques)","El servicio se reinicia indefinidamente sin parar","El servicio pasa a Restart=always automáticamente","systemd elimina el unit file"], correct:0,
+      exp:"Al superar <code>StartLimitBurst=3</code> dentro de <code>StartLimitIntervalSec=60</code>, systemd detiene los reintentos automáticos para evitar un crash loop infinito; hay que resetear con <code>systemctl reset-failed</code>." },
+    { cat:"LAB3 · Ecosistema CTT", q:"En la estructura del laboratorio integrador (LAB3), ¿qué usuario de sistema corre todos los servicios del ecosistema CTT?", type:"single", pts:1,
+      opts:["ctt-svc","root","lab2-svc","ctt-monitor"], correct:0,
+      exp:"El LAB3 unifica todos los servicios bajo un único usuario de sistema, <code>ctt-svc</code>, creado sin shell interactiva para correr monitor, backup, cleanup y alert." },
+    { cat:"LAB3 · Objetivo de seguridad", q:"¿Qué score objetivo de <code>systemd-analyze security</code> se busca alcanzar en el laboratorio integrador (Perfil B)?", type:"single", pts:1,
+      opts:["Menor a 4.0","Mayor a 8.0","Exactamente 5.0","No se mide en este laboratorio"], correct:0,
+      exp:"El LAB3 (y el criterio de evaluación del LAB2 para Perfil B) apunta a un score de seguridad menor a 4.0 en la escala de <code>systemd-analyze security</code>." },
+    { cat:"LAB3 · OnFailure=", q:"¿Para qué se usa la directiva <code>OnFailure=</code> en el ecosistema CTT del LAB3?", type:"single", pts:1,
+      opts:["Para disparar un servicio de alertas cuando otra unit falla","Para reiniciar automáticamente el servicio","Para definir el usuario del servicio","Para establecer el orden de arranque"], correct:0,
+      exp:"<code>OnFailure=</code> permite encadenar una unit (como ctt-alert.service) que se dispara automáticamente cuando el servicio principal entra en estado de fallo, implementando un sistema de alertas." },
+    { cat:"Escenario real", q:'Un servicio queda en estado <code>active (exited)</code> en vez de "running", aunque su script sigue corriendo en background. ¿Cuál es la causa más probable?', type:"single", pts:1,
+      opts:["Type=simple con un script que lanza el proceso real en background y termina","Restart=always mal configurado","Un StartLimitBurst= demasiado alto","ProtectHome=true bloqueando el proceso"], correct:0,
+      exp:'Es el Escenario C visto en clase: con Type=simple, si el script hace fork a background y termina, systemd pierde el proceso real y lo marca como "active (exited)". La solución es usar Type=forking con PIDFile=, Type=notify, o mantener el proceso en foreground.' },
+    { cat:"Escenario real", q:'Nginx falla con "Permission denied" al intentar escribir en /tmp/nginx, teniendo <code>PrivateTmp=true</code> activo. ¿Cuál es el fix recomendado?', type:"single", pts:1,
+      opts:["Agregar RuntimeDirectory=nginx para que systemd cree /run/nginx con permisos correctos","Quitar todo el hardening del servicio","Cambiar el usuario del servicio a root","Deshabilitar journald"], correct:0,
+      exp:'Es el Escenario B visto en clase: PrivateTmp=true aísla /tmp, y si el proceso espera escribir en una ruta externa, falla. La solución recomendada es declarar <code>RuntimeDirectory=</code> para que systemd prepare un directorio de runtime válido en /run/.' }
+  ]
+}
+];
+
+/* ===================== CONFIG ===================== */
+const PENALTY = 0.25; // puntos que se descuentan por cada pregunta mal contestada
+const LETTERS = "ABCDEF";
+
+/* ===================== ESTADO ===================== */
+let ALL = [];              // preguntas seleccionadas para esta sesión
+let TOTAL_Q = 0, TOTAL_PTS = 0;
+let idx = 0;
+let answers = [];          // paralelo a ALL: null (sin responder) | number (single) | number[] (multi)
+let student = { nombre:"", apellido:"", ci:"" };
+let navOpen = false;
+
+const startbody = document.getElementById("startbody");
+const startcard = document.getElementById("startcard");
+const qcard = document.getElementById("qcard");
+const progress = document.getElementById("progress");
+const qbody = document.getElementById("qbody");
+const tlabel = document.getElementById("tlabel");
+const pbar = document.getElementById("pbar");
+const ptext = document.getElementById("ptext");
+const ppts = document.getElementById("ppts");
+const navToggleBtn = document.getElementById("navtoggle");
+const navToggleTxt = document.getElementById("navtoggletxt");
+const navGrid = document.getElementById("navgrid");
+const rcard = document.getElementById("rcard");
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmt(n){
+  n = Math.round(n*100)/100;
+  if (Object.is(n,-0)) n = 0;
+  if (Number.isInteger(n)) return String(n).replace(".", ",");
+  let s = n.toFixed(2);
+  if (s.endsWith("0")) s = s.slice(0,-1);
+  return s.replace(".", ",");
+}
+
+/* ---- pantalla de inicio: datos del alumno + partes ---- */
+function renderStart(){
+  const counts = PARTS.map(p => p.questions.length);
+  const ptsPer = PARTS.map(p => p.questions.reduce((a,q)=>a+q.pts,0));
+  let html = "";
+  html += '<div class="sectionlbl">Datos del alumno</div>';
+  html += '<div class="formgrid">' +
+          '<div class="field"><label for="fnombre">Nombre *</label><input id="fnombre" type="text" autocomplete="given-name" value="' + esc(student.nombre) + '"></div>' +
+          '<div class="field"><label for="fapellido">Apellido *</label><input id="fapellido" type="text" autocomplete="family-name" value="' + esc(student.apellido) + '"></div>' +
+          '<div class="field full"><label for="fci">C.I. *</label><input id="fci" type="text" inputmode="numeric" autocomplete="off" placeholder="Sin puntos ni guiones" value="' + esc(student.ci) + '"></div>' +
+          '</div>';
+  html += '<div class="sectionlbl">Contenidos a evaluar</div>';
+  PARTS.forEach((p, i) => {
+    html += '<label class="part-row"><input type="checkbox" class="psel" data-i="' + i + '" checked>' +
+            '<span class="pi"><span class="pt">' + p.name + '</span><span class="pd">' + p.desc + '</span></span>' +
+            '<span class="pc">' + counts[i] + ' preg · ' + ptsPer[i] + ' pts</span></label>';
+  });
+  html += '<div class="startfoot"><span id="totalsel">' + counts.reduce((a,b)=>a+b,0) + ' preguntas seleccionadas</span>' +
+          '<button type="button" class="btn primary" id="startbtn">Comenzar evaluación →</button></div>';
+  html += '<div class="warn" id="startwarn">Completá nombre, apellido y C.I., y seleccioná al menos un bloque de contenidos.</div>';
+  startbody.innerHTML = html;
+
+  const checks = [...startbody.querySelectorAll(".psel")];
+  const totalLbl = document.getElementById("totalsel");
+  const fnombre = document.getElementById("fnombre");
+  const fapellido = document.getElementById("fapellido");
+  const fci = document.getElementById("fci");
+  const warn = document.getElementById("startwarn");
+
+  function validReady(){
+    const n = checks.reduce((a,c)=> a + (c.checked ? counts[+c.dataset.i] : 0), 0);
+    totalLbl.textContent = n + " pregunta" + (n===1?"":"s") + " seleccionada" + (n===1?"":"s");
+    const ok = fnombre.value.trim().length > 0 && fapellido.value.trim().length > 0 &&
+               fci.value.trim().length >= 6 && n > 0;
+    document.getElementById("startbtn").disabled = false; // habilitado siempre; validamos al click
+    return ok;
+  }
+  checks.forEach(c => c.addEventListener("change", validReady));
+  [fnombre, fapellido, fci].forEach(f => f.addEventListener("input", validReady));
+  validReady();
+
+  document.getElementById("startbtn").addEventListener("click", () => {
+    const nOk = fnombre.value.trim().length > 0;
+    const aOk = fapellido.value.trim().length > 0;
+    const cOk = fci.value.trim().length >= 6;
+    const chosen = checks.filter(c => c.checked).map(c => +c.dataset.i);
+    [fnombre, fapellido, fci].forEach(f => f.classList.remove("err"));
+    if (!nOk) fnombre.classList.add("err");
+    if (!aOk) fapellido.classList.add("err");
+    if (!cOk) fci.classList.add("err");
+    if (!nOk || !aOk || !cOk || chosen.length === 0) {
+      warn.classList.add("show");
+      return;
+    }
+    warn.classList.remove("show");
+    student = { nombre: fnombre.value.trim(), apellido: fapellido.value.trim(), ci: fci.value.trim() };
+    beginExam(chosen);
+  });
+}
+
+function shuffleOptions(q){
+  const order = q.opts.map((_,i)=>i);
+  for (let i=order.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+  }
+  const opts = order.map(origIdx => q.opts[origIdx]);
+  let correct;
+  if (q.type === "multi") {
+    const set = new Set(q.correct);
+    correct = order.map((origIdx, newIdx) => set.has(origIdx) ? newIdx : -1).filter(x => x >= 0).sort((a,b)=>a-b);
+  } else {
+    correct = order.indexOf(q.correct);
+  }
+  return {...q, opts, correct};
+}
+
+function beginExam(chosenParts){
+  ALL = [];
+  chosenParts.forEach(pi => {
+    PARTS[pi].questions.forEach(q => ALL.push({...shuffleOptions(q), part: pi}));
+  });
+  TOTAL_Q = ALL.length;
+  TOTAL_PTS = ALL.reduce((a,q)=>a+q.pts, 0);
+  idx = 0;
+  answers = new Array(TOTAL_Q).fill(null);
+  navOpen = false;
+
+  startcard.style.display = "none";
+  progress.style.display = "flex";
+  navToggleBtn.style.display = "";
+  qcard.style.display = "";
+  rcard.classList.remove("show");
+  buildNavGrid();
+  render();
+}
+
+/* ---- navegador de preguntas ---- */
+function buildNavGrid(){
+  let html = "";
+  for (let i=0;i<TOTAL_Q;i++){
+    html += '<button type="button" class="navcell" data-i="' + i + '"></button>';
+  }
+  navGrid.innerHTML = html;
+  [...navGrid.querySelectorAll(".navcell")].forEach(c => c.addEventListener("click", () => {
+    idx = +c.dataset.i;
+    render();
+  }));
+  updateNavGrid();
+}
+function updateNavGrid(){
+  const answered = answers.filter(a => a !== null).length;
+  navToggleTxt.textContent = "Ver todas las preguntas (" + answered + "/" + TOTAL_Q + " respondidas)";
+  [...navGrid.querySelectorAll(".navcell")].forEach((c,i) => {
+    c.textContent = i+1;
+    c.classList.toggle("answered", answers[i] !== null);
+    c.classList.toggle("current", i === idx);
+  });
+}
+navToggleBtn.addEventListener("click", () => {
+  navOpen = !navOpen;
+  navToggleBtn.classList.toggle("open", navOpen);
+  navGrid.classList.toggle("open", navOpen);
+});
+
+/* ---- renderizar pregunta actual ---- */
+function render() {
+  const q = ALL[idx];
+  const part = PARTS[q.part];
+  const multi = q.type === "multi";
+  const current = answers[idx];
+
+  tlabel.textContent = part.short.toLowerCase().replace(/\s+/g,"_") + "_" + String(idx + 1).padStart(3, "0") + ".sh";
+  ptext.textContent = "[ " + (idx+1) + "/" + TOTAL_Q + " ]";
+  const answeredCount = answers.filter(a => a !== null).length;
+  ppts.textContent = answeredCount + "/" + TOTAL_Q + " respondidas";
+  pbar.style.width = ((idx+1) / TOTAL_Q * 100) + "%";
+  updateNavGrid();
+
+  let html = "";
+  html += '<span class="pts">' + q.pts + (q.pts === 1 ? " punto" : " puntos") + "</span>";
+  html += '<span class="badge">PREGUNTA ' + (idx + 1) + "/" + TOTAL_Q + '</span><span class="cat">' + part.name + " · " + q.cat + "</span>";
+  html += '<div class="qtext">' + q.q + "</div>";
+  html += '<div class="hint">' + (multi ? "Seleccioná todas las que correspondan. Podés dejarla en blanco o cambiar de idea." : "Marcá una opción, o dejala en blanco si no estás seguro.") + "</div>";
+  html += '<div class="opts" role="group">';
+  q.opts.forEach((o, i) => {
+    const picked = multi ? (Array.isArray(current) && current.includes(i)) : (current === i);
+    html += '<button type="button" class="opt' + (multi ? " multi" : "") + (picked ? " picked" : "") + '" data-i="' + i + '">' +
+            '<span class="let">' + LETTERS[i] + '</span><span class="txt">' + esc(o) + "</span></button>";
+  });
+  html += "</div>";
+  html += '<div class="actions">' +
+          '<button type="button" class="btn" id="prevBtn"' + (idx===0 ? " disabled" : "") + '>← Anterior</button>' +
+          (idx < TOTAL_Q-1 ? '<button type="button" class="btn" id="nextBtn">Siguiente →</button>' : "") +
+          '<span class="spacer"></span>' +
+          '<button type="button" class="btn finish' + (idx===TOTAL_Q-1 ? " primary" : "") + '" id="finishBtn">Finalizar evaluación</button>' +
+          "</div>";
+  qbody.innerHTML = html;
+
+  const optEls = [...qbody.querySelectorAll(".opt")];
+  optEls.forEach(el => el.addEventListener("click", () => {
+    const i = +el.dataset.i;
+    if (!multi) {
+      answers[idx] = (answers[idx] === i) ? null : i;   // click de nuevo = deseleccionar
+    } else {
+      let set = Array.isArray(answers[idx]) ? answers[idx].slice() : [];
+      const p = set.indexOf(i);
+      if (p >= 0) set.splice(p,1); else set.push(i);
+      answers[idx] = set.length ? set.sort((a,b)=>a-b) : null;
+    }
+    render();
+  }));
+
+  const prevBtn = document.getElementById("prevBtn");
+  if (prevBtn) prevBtn.addEventListener("click", () => { idx--; render(); });
+  const nextBtn = document.getElementById("nextBtn");
+  if (nextBtn) nextBtn.addEventListener("click", () => { idx++; render(); });
+  document.getElementById("finishBtn").addEventListener("click", tryFinish);
+}
+
+function tryFinish(){
+  const pending = answers.filter(a => a === null).length;
+  if (pending > 0) {
+    const ok = confirm("Tenés " + pending + " pregunta" + (pending===1?"":"s") + " sin responder.\n¿Confirmás que querés finalizar y entregar la evaluación de todas formas?");
+    if (!ok) return;
+  } else {
+    const ok = confirm("¿Confirmás que querés finalizar y entregar la evaluación?");
+    if (!ok) return;
+  }
+  finalizeExam();
+}
+
+/* ---- corrección y resumen ---- */
+function isCorrect(q, ans){
+  if (ans === null) return null; // en blanco
+  if (q.type === "multi") {
+    const c = q.correct.slice().sort((a,b)=>a-b);
+    const a = ans.slice().sort((a,b)=>a-b);
+    return c.length === a.length && c.every((v,i)=>v===a[i]);
+  }
+  return ans === q.correct;
+}
+function letterList(idxArr, opts){
+  return idxArr.map(i => LETTERS[i] + ". " + opts[i]).join("<br>");
+}
+
+function finalizeExam(){
+  const partStats = PARTS.map(() => ({pts:0, max:0, ok:0, no:0, blank:0, n:0}));
+  let ok=0, no=0, blank=0, raw=0;
+
+  ALL.forEach((q, i) => {
+    partStats[q.part].max += q.pts;
+    partStats[q.part].n++;
+    const res = isCorrect(q, answers[i]);
+    if (res === null) { blank++; partStats[q.part].blank++; }
+    else if (res) { ok++; raw += q.pts; partStats[q.part].pts += q.pts; partStats[q.part].ok++; }
+    else { no++; raw -= PENALTY; partStats[q.part].no++; }
+  });
+  const finalScore = Math.max(0, raw);
+  const pct = TOTAL_PTS > 0 ? Math.round(finalScore / TOTAL_PTS * 100) : 0;
+
+  qcard.style.display = "none";
+  progress.style.display = "none";
+  navToggleBtn.style.display = "none";
+  navGrid.classList.remove("open");
+  rcard.classList.add("show");
+
+  const now = new Date();
+  const fecha = now.toLocaleString("es-UY", { dateStyle:"long", timeStyle:"short" });
+
+  let html = "";
+  html += '<div class="rhead">$ ./eval_formal_u1.sh --resumen<br>' +
+          "<b>" + esc(student.nombre) + " " + esc(student.apellido) + "</b> · C.I. " + esc(student.ci) + "<br>" +
+          fecha + "</div>";
+  html += '<div class="score-big">' + fmt(finalScore) + '<span class="of"> / ' + TOTAL_PTS + ' pts</span></div>';
+  html += '<div class="msg">' + msgFor(pct) + " (" + pct + "%)</div>";
+  html += '<div class="statrow">' +
+          '<div class="stat ok"><div class="t">CORRECTAS</div><div class="v">' + ok + '</div></div>' +
+          '<div class="stat no"><div class="t">INCORRECTAS</div><div class="v">' + no + '</div></div>' +
+          '<div class="stat blank"><div class="t">EN BLANCO</div><div class="v">' + blank + '</div></div>' +
+          '</div>';
+  html += '<div class="penalty">Penalización aplicada: −' + fmt(no * PENALTY) + ' pts (' + no + ' incorrecta' + (no===1?"":"s") + ' × ' + fmt(PENALTY) + ' pt)' + (raw < 0 ? " · el puntaje se ajustó a 0 (no negativo)" : "") + '</div>';
+
+  html += '<div class="parts">';
+  PARTS.forEach((p, pi) => {
+    const s = partStats[pi];
+    if (!s || s.n === 0) return;
+    html += '<div class="part"><div class="t">' + p.name + '</div>' +
+            '<div class="v">' + fmt(Math.max(0, s.pts - s.no*PENALTY)) + " / " + s.max + " pts</div>" +
+            '<div class="b">✔ ' + s.ok + '  ✘ ' + s.no + '  — ' + s.blank + '</div></div>';
+  });
+  html += "</div>";
+
+  html += '<div class="revtitle">Detalle de respuestas contestadas</div><div class="revwrap">';
+  let anyAnswered = false;
+  PARTS.forEach((p, pi) => {
+    const rows = [];
+    ALL.forEach((q, i) => {
+      if (q.part !== pi) return;
+      if (answers[i] === null) return; // el reporte final solo incluye preguntas contestadas
+      const res = isCorrect(q, answers[i]);
+      const mkClass = res ? "mkok" : "mkno";
+      const mkSym = res ? "✔" : "✘";
+      const yourAns = q.type === "multi" ? letterList(answers[i], q.opts) : LETTERS[answers[i]] + ". " + esc(q.opts[answers[i]]);
+      const correctAns = q.type === "multi" ? letterList(q.correct, q.opts) : LETTERS[q.correct] + ". " + esc(q.opts[q.correct]);
+      rows.push('<div class="revrow"><span class="rn">' + (i+1) + '.</span>' +
+        '<span class="rq"><span class="rqtext">' + q.q + " <span class='" + mkClass + "'>" + mkSym + "</span></span>" +
+        "<div class='rya'>Tu respuesta: " + yourAns + (res===false ? "<br>Correcta: " + correctAns : "") + "</div></span></div>");
+    });
+    if (rows.length) {
+      anyAnswered = true;
+      html += '<div class="revgroup"><div class="revgrouphead">' + p.name + '</div>' + rows.join("") + '</div>';
+    }
+  });
+  if (!anyAnswered) {
+    html += '<div class="revrow"><span class="rq"><span class="rqtext">No respondiste ninguna pregunta.</span></span></div>';
+  }
+  html += "</div>";
+
+  html += '<div class="actions" style="margin-top:20px">' +
+          '<button type="button" class="btn primary" id="share">Compartir resumen</button>' +
+          '<button type="button" class="btn" id="copy">Copiar</button>' +
+          '<button type="button" class="btn" id="printBtn">Imprimir / Guardar PDF</button>' +
+          '<button type="button" class="btn" id="retry">Nueva evaluación</button>' +
+          '<span class="copied" id="copied">copiado ✔</span></div>';
+
+  rcard.querySelector("#rbody") ? null : null;
+  document.getElementById("rbody").innerHTML = html;
+
+  const text = shareText(student, fecha, finalScore, pct, ok, no, blank, partStats);
+  const flash = () => { const c = document.getElementById("copied"); c.classList.add("on"); setTimeout(() => c.classList.remove("on"), 1800); };
+  const copy = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash, flash);
+    else {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); flash();
+    }
+  };
+  document.getElementById("copy").addEventListener("click", copy);
+  document.getElementById("share").addEventListener("click", () => {
+    if (navigator.share) navigator.share({ text: text }).catch(() => {});
+    else copy();
+  });
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+  document.getElementById("retry").addEventListener("click", () => {
+    student = { nombre:"", apellido:"", ci:"" };
+    rcard.classList.remove("show");
+    startcard.style.display = "";
+    renderStart();
+  });
+
+  window.scrollTo({top:0, behavior: "smooth"});
+}
+
+function msgFor(p) {
+  if (p >= 95) return "¡Impecable! Nivel systemd-analyze security: 0.0";
+  if (p >= 80) return "Muy buen desempeño en la U1.";
+  if (p >= 60) return "Aprobado — hay puntos concretos para reforzar.";
+  if (p >= 40) return "Insuficiente — conviene repasar el material antes de reintentar.";
+  return "Necesita repaso a fondo de la U1 antes del próximo intento.";
+}
+
+function shareText(st, fecha, score, pct, ok, no, blank, partStats){
+  let t = "Evaluación Formal · Linux III — U1\n" +
+          st.nombre + " " + st.apellido + " · C.I. " + st.ci + "\n" +
+          fecha + "\n" +
+          "Puntaje: " + fmt(score) + "/" + TOTAL_PTS + " pts (" + pct + "%)\n" +
+          "Correctas: " + ok + " · Incorrectas: " + no + " · En blanco: " + blank + "\n";
+  PARTS.forEach((p, pi) => {
+    const s = partStats[pi];
+    if (!s || s.n === 0) return;
+    t += "- " + p.name + ": " + fmt(Math.max(0, s.pts - s.no*PENALTY)) + "/" + s.max + " pts\n";
+  });
+  return t;
+}
+
+renderStart();
+</script>
+</body>
+</html>
