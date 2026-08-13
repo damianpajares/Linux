@@ -26,6 +26,18 @@ El repo ya tiene dos patrones de prueba HTML autocontenida (CSS+JS inline, sin d
    - Escala: ~35-40 preguntas por unidad (~110 total), en línea con S1 (~35/módulo) y S3 (~100 en solo U1). Cada pregunta con `cat` (subtema) y `exp` (justificación técnica).
    - **Fuera de alcance en esta iteración:** labs `.md` para S2 (S3 sí los tiene para U1) — queda anotado en `ROADMAP.md` como pendiente futuro.
 
+## Parte 4 — Contenido teórico faltante de S2 (agregado 2026-08-13)
+
+Se cruzó el contenido de la guía contra lo que realmente cubren las clases existentes de S2 (`Linux2_Clase0_Nexo_CTT.pptx`, `Linux2_Clase1_...docx`, `Comillas_Salida_y_Pruebas_Linux1.pptx`, extraídos a texto con el mismo método zipfile+regex). Hallazgo: Clase0 es un resumen de las 16 semanas a nivel índice; Clase1 solo profundiza streams/redirecciones/pipes + intro de systemctl/journalctl; Comillas_Salida_y_Pruebas cubre bien quoting/tests pero es material previo, no una clase oficial de la secuencia. **No existe ninguna clase dedicada a U2 (SSH) ni a la parte central de U3 (scripting/cron)**, y U1 le falta cut/sort/uniq/find+xargs, gestión de procesos, diagnóstico de red y regex ERE.
+
+Se agregan tres documentos Markdown en `S2/`, con el mismo formato de apunte que los `LAB0x.md` de S3 (teoría + tablas de comandos + ejercicios Perfil A/B + evaluación), nombrados por unidad:
+
+- `S2/U1_Complemento_Filtros_Procesos.md`
+- `S2/U2_SSH_Administracion_Remota.md`
+- `S2/U3_ShellScripting_Automatizacion.md`
+
+No duplican lo ya cubierto por Clase1 y Comillas_Salida_y_Pruebas, lo complementan. La conversión a `.pptx` con el estilo visual de las clases existentes queda para una iteración futura (anotada en `ROADMAP.md`).
+
 ## Fuera de alcance
 
 - Construir el contenido faltante de S1 (evaluación formal) y S3 (U2/U3) — queda documentado en `ROADMAP.md` para una iteración futura, no se construye ahora.

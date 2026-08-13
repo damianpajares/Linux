@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Práctica · Linux II — Redes POSIX, SSH y Scripting</title>
+<style>
+  :root{
+    --bg:#0D1117; --card:#161B22; --border:#30363D;
+    --txt:#E6EDF3; --mut:#8B949E;
+    --green:#3FB950; --green-soft:#7EE787; --green-bg:#12261A; --green-line:#23492F;
+    --orange:#FFA657; --orange-bg:#2b2010; --blue:#A5D6FF; --red:#FF7B72; --red-bg:#2D1517; --red-line:#5C2326;
+    --mono:"JetBrains Mono","Cascadia Code",ui-monospace,"Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;
+       display:flex;justify-content:center;padding:24px 16px 60px}
+  .wrap{width:100%;max-width:860px}
+
+  .prompt{font-family:var(--mono);font-size:14px;margin-bottom:6px;word-break:break-all}
+  .prompt .u{color:var(--green)} .prompt .p{color:var(--blue)}
+  h1{font-size:clamp(22px,4.5vw,32px);font-weight:700;margin:14px 0 4px}
+  .sub{color:var(--mut);font-size:15px;margin-bottom:22px}
+  .back{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:13px;
+        color:var(--mut);background:none;border:none;cursor:pointer;margin-bottom:14px;padding:4px 0}
+  .back:hover{color:var(--txt)}
+
+  .progress{font-family:var(--mono);font-size:13px;color:var(--mut);display:flex;
+            align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .bar{flex:1;min-width:120px;height:8px;background:var(--card);border:1px solid var(--border);
+       border-radius:99px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .3s ease}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+        overflow:hidden;animation:up .25s ease}
+  @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){ .card{animation:none!important} .bar>i{transition:none} }
+  .tbar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .tbar .lbl{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .cbody{padding:22px 22px 24px}
+
+  .badge{display:inline-block;font-family:var(--mono);font-size:12.5px;font-weight:700;
+         color:var(--green);background:var(--green-bg);border:1px solid var(--green-line);
+         border-radius:6px;padding:4px 10px;margin-bottom:6px}
+  .badge.flagged{color:var(--orange);background:var(--orange-bg);border-color:#5c3d17}
+  .cat{font-size:13px;color:var(--mut);margin-left:8px}
+  .qtext{font-size:19px;font-weight:700;line-height:1.35;margin:10px 0 6px}
+  .qtext code{font-family:var(--mono);color:var(--green-soft);font-size:.88em;
+              background:var(--bg);padding:2px 6px;border-radius:5px}
+  .hint{font-size:13px;color:var(--mut);font-style:italic;margin-bottom:14px}
+
+  .opts{display:grid;gap:10px;margin-top:8px}
+  .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+       background:var(--bg);border:1px solid var(--border);border-radius:8px;
+       padding:12px 14px;color:var(--txt);font-family:var(--mono);font-size:14px;
+       transition:border-color .15s, background .15s}
+  .opt:hover:not(:disabled){border-color:var(--mut)}
+  .opt:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .opt .let{flex:0 0 28px;height:28px;border:1.5px solid var(--orange);border-radius:50%;
+            display:grid;place-items:center;font-weight:700;font-size:12.5px;color:var(--orange)}
+  .opt.multi .let{border-radius:7px}
+  .opt:disabled{cursor:default}
+  .opt.correct{background:var(--green-bg);border-color:var(--green)}
+  .opt.correct .let{border-color:var(--green);color:var(--green)}
+  .opt.correct span.txt{color:var(--green-soft);font-weight:700}
+  .opt.wrong{background:var(--red-bg);border-color:var(--red-line)}
+  .opt.wrong .let{border-color:var(--red);color:var(--red)}
+  .opt.wrong span.txt{color:var(--red)}
+  .opt.dim{opacity:.5}
+  .opt.picked:not(.correct):not(.wrong){background:var(--green-bg);border-color:var(--green)}
+  .mark{margin-left:auto;font-family:var(--mono);font-weight:700}
+  .mark.ok{color:var(--green)} .mark.no{color:var(--red)}
+
+  .typewrap{display:flex;gap:10px;margin-top:8px;flex-wrap:wrap}
+  .typewrap input{flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border);
+                  border-radius:8px;padding:12px 14px;color:var(--txt);font-family:var(--mono);
+                  font-size:15px}
+  .typewrap input:focus{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  .typewrap input:disabled{opacity:.7}
+  .typewrap input.correct{border-color:var(--green);background:var(--green-bg);color:var(--green-soft)}
+  .typewrap input.wrong{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+
+  .feed{margin-top:16px;border-radius:8px;padding:14px 16px;font-size:14px;line-height:1.5;display:none}
+  .feed.show{display:block}
+  .feed.good{background:var(--green-bg);border:1px solid var(--green-line)}
+  .feed.bad{background:var(--red-bg);border:1px solid var(--red-line)}
+  .feed b.tag{font-family:var(--mono)}
+  .feed.good b.tag{color:var(--green)} .feed.bad b.tag{color:var(--red)}
+  .feed code{font-family:var(--mono);color:var(--green-soft);background:var(--bg);
+             padding:1px 5px;border-radius:4px}
+  .feed .accepted{font-family:var(--mono);color:var(--green-soft);margin-top:4px}
+
+  .actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:var(--mono);font-size:13.5px;font-weight:700;cursor:pointer;
+       border-radius:8px;padding:10px 16px;border:1px solid var(--border);
+       background:var(--card);color:var(--txt);transition:filter .15s}
+  .btn:hover{filter:brightness(1.2)}
+  .btn:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .btn.primary{background:var(--green-bg);border-color:var(--green);color:var(--green-soft)}
+  .btn.flag{background:var(--orange-bg);border-color:#5c3d17;color:var(--orange)}
+  .btn.finish{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .btn:disabled{opacity:.35;cursor:default;filter:none}
+  .spacer{flex:1 1 auto}
+
+  /* ---- home: tarjetas de módulo ---- */
+  .modcard{display:flex;flex-direction:column;gap:10px;background:var(--card);border:1px solid var(--border);
+           border-radius:10px;padding:20px;margin-bottom:14px}
+  .modcard .mhead{display:flex;align-items:center;gap:10px}
+  .modnum{font-family:var(--mono);font-size:13px;color:var(--bg);background:var(--green);
+          border-radius:6px;padding:3px 9px;font-weight:700}
+  .modtitle{font-size:18px;font-weight:700}
+  .moddesc{color:var(--mut);font-size:14px;line-height:1.5}
+  .modmeta{font-family:var(--mono);font-size:12.5px;color:var(--mut);display:flex;gap:14px;flex-wrap:wrap}
+  .modmeta b{color:var(--green-soft)}
+  .modfoot{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+
+  /* ---- navegador de preguntas ---- */
+  .navtoggle{width:100%;text-align:left;background:var(--card);border:1px solid var(--border);
+             border-radius:8px;padding:10px 14px;color:var(--mut);font-family:var(--mono);
+             font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .navtoggle:hover{border-color:var(--mut)}
+  .navtoggle .car{margin-left:auto;transition:transform .15s}
+  .navtoggle.open .car{transform:rotate(180deg)}
+  .navgrid{display:none;grid-template-columns:repeat(10,1fr);gap:6px;margin:-6px 0 14px;
+           background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+  .navgrid.open{display:grid}
+  @media (max-width:520px){.navgrid{grid-template-columns:repeat(7,1fr)}}
+  .navcell{aspect-ratio:1;border:1px solid var(--border);border-radius:5px;background:var(--bg);
+           color:var(--mut);font-family:var(--mono);font-size:11px;cursor:pointer;
+           display:grid;place-items:center;transition:border-color .1s}
+  .navcell:hover{border-color:var(--mut)}
+  .navcell.ok{background:var(--green-bg);border-color:var(--green-line);color:var(--green-soft)}
+  .navcell.no{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .navcell.flag{border-color:var(--orange);color:var(--orange)}
+  .navcell.current{border-width:2px;border-color:var(--blue);color:var(--blue);font-weight:700}
+  .navlegend{font-family:var(--mono);font-size:11.5px;color:var(--mut);display:flex;gap:14px;
+             flex-wrap:wrap;margin:-4px 0 14px;padding:0 2px}
+  .navlegend span{display:inline-flex;align-items:center;gap:5px}
+  .navlegend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+  /* ---- resumen de módulo ---- */
+  .result{display:none}
+  .result.show{display:block}
+  .rout{font-family:var(--sans);font-size:14px;line-height:1.6;padding:22px}
+  .score-big{font-family:var(--mono);font-size:clamp(34px,7vw,48px);font-weight:700;color:var(--green);margin:6px 0}
+  .score-big .of{font-size:.42em;color:var(--mut);font-weight:400}
+  .msg{font-size:16px;margin:6px 0 16px;color:var(--txt)}
+  .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  @media (max-width:560px){.statrow{grid-template-columns:1fr 1fr}}
+  .stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .stat .t{font-family:var(--mono);font-size:11px;color:var(--mut)}
+  .stat .v{font-family:var(--mono);font-size:20px;font-weight:700;margin-top:4px}
+  .stat.ok .v{color:var(--green-soft)} .stat.no .v{color:var(--red)} .stat.pend .v{color:var(--orange)}
+  .revtitle{font-family:var(--mono);font-size:13px;color:var(--mut);margin:18px 0 10px;
+            text-transform:uppercase;letter-spacing:.04em}
+  .revwrap{max-height:360px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+  .revrow{display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-top:1px solid var(--border);
+          font-size:13px}
+  .revrow:first-child{border-top:none}
+  .revrow .rn{font-family:var(--mono);color:var(--mut);flex:0 0 26px}
+  .revrow .rq{flex:1;min-width:0}
+  .revrow .rya{font-family:var(--mono);font-size:12px;margin-top:3px;color:var(--mut)}
+  .revrow .mkok{color:var(--green)} .revrow .mkno{color:var(--red)}
+  .copied{font-family:var(--mono);font-size:13px;color:var(--green);opacity:0;transition:opacity .2s}
+  .copied.on{opacity:1}
+
+  footer{margin-top:26px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  footer .g{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt"><span class="u">ariel@linux2</span>:<span class="p">~</span>$ ./practica_s2.sh --menu</div>
+  <h1>Práctica · Linux II — Redes POSIX, SSH y Scripting</h1>
+  <div class="sub">Repaso interactivo con corrección al instante, organizado en las 3 unidades del curso. Marcá con ⚑ las que quieras dejar para después y volvé a ellas cuando quieras.</div>
+
+  <div id="homeview"></div>
+
+  <button type="button" class="back" id="backBtn" style="display:none">← Volver a unidades</button>
+  <div class="progress" id="progress" style="display:none">
+    <span id="ptext">[ 0/0 ]</span>
+    <div class="bar"><i id="pbar"></i></div>
+    <span id="ppend">0 pendientes</span>
+  </div>
+  <button type="button" class="navtoggle" id="navtoggle" style="display:none">
+    <span id="navtoggletxt">Ver todas las preguntas</span><span class="car">▾</span>
+  </button>
+  <div class="navlegend" id="navlegend" style="display:none">
+    <span><i style="background:var(--green-bg);border:1px solid var(--green-line)"></i>correcta</span>
+    <span><i style="background:var(--red-bg);border:1px solid var(--red-line)"></i>incorrecta</span>
+    <span><i style="background:var(--bg);border:1px solid var(--orange)"></i>marcada</span>
+    <span><i style="background:var(--bg);border:1px solid var(--border)"></i>sin ver</span>
+  </div>
+  <div class="navgrid" id="navgrid"></div>
+
+  <div class="card" id="qcard" style="display:none">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl" id="tlabel">pregunta.sh</span>
+    </div>
+    <div class="cbody" id="qbody"></div>
+  </div>
+
+  <div class="card result" id="rcard">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">resumen</span>
+    </div>
+    <div class="rout" id="rbody"></div>
+  </div>
+
+  <footer><span class="g">exit 0</span> — Linux II · CTT · Redes POSIX — SHSCRIPT</footer>
+</div>
+
+<script>
+"use strict";
+/* ===================== DATOS ===================== */
+/* type: "mc" (single), "multi", "type" (comando a escribir)
+   mc/multi: opts[], correct: idx | idx[]
+   type: accept: string[] (respuestas válidas, normalizadas al comparar) */
+const MODULES = [
+{
+  key:"u1", name:"Unidad 1 — Comandos Avanzados y POSIX", short:"U1",
+  desc:"Redirecciones, pipes, grep/awk/sed, cut/sort/uniq, find+xargs, procesos y diagnóstico básico.",
+  questions: [
+    { type:"type", cat:"Redirecciones", q:"¿Qué comando de redirección envía toda salida de error a /dev/null? Escribí solo el operador (ej: &gt;).",
+      accept:["2>"], exp:"<code>2&gt;</code> redirige exclusivamente el descriptor de stderr (2) al destino indicado." },
+    { type:"mc", cat:"Redirecciones", q:"¿Qué hace <code>comando &gt;&gt; log.txt</code>?", opts:["Agrega la salida al final del archivo, sin borrar lo anterior","Sobrescribe el archivo por completo","Redirige solo los errores","Elimina el archivo si existe"], correct:0,
+      exp:"<code>&gt;&gt;</code> siempre agrega (append) al final, a diferencia de <code>&gt;</code> que sobrescribe." },
+    { type:"type", cat:"Pipes", q:"¿Qué comando cuenta líneas, palabras y caracteres de un archivo? (una palabra)",
+      accept:["wc"], exp:"<code>wc</code> (word count) con <code>-l</code>, <code>-w</code> o <code>-c</code> cuenta líneas, palabras o caracteres." },
+    { type:"mc", cat:"Pipes", q:"En la cadena <code>ps aux | grep nginx | awk '{print $2}'</code>, ¿qué se obtiene al final?", opts:["El PID de los procesos que contienen 'nginx'","El nombre de usuario que corre nginx","La cantidad de procesos nginx","El uso de memoria de nginx"], correct:0,
+      exp:"En la salida de <code>ps aux</code>, la columna 2 es el PID. La cadena filtra por 'nginx' y extrae esa columna." },
+    { type:"type", cat:"grep/awk/sed", q:"¿Qué comando permite buscar patrones de texto en un archivo o flujo? (una palabra)",
+      accept:["grep"], exp:"<code>grep</code> (Global Regular Expression Print) busca líneas que coincidan con un patrón." },
+    { type:"mc", cat:"grep/awk/sed", q:"¿Qué hace <code>grep -v 'comentario' archivo</code>?", opts:["Muestra las líneas que NO contienen 'comentario'","Muestra solo las líneas con 'comentario'","Cuenta cuántas veces aparece 'comentario'","Reemplaza 'comentario' por vacío"], correct:0,
+      exp:"<code>-v</code> invierte la coincidencia: muestra las líneas que NO matchean el patrón." },
+    { type:"mc", cat:"grep/awk/sed", q:"¿Qué procesador de texto es ideal para trabajar con columnas y campos estructurados?", opts:["awk","cat","less","touch"], correct:0,
+      exp:"<code>awk</code> está diseñado para procesar datos estructurados en campos ($1, $2, ... $NF)." },
+    { type:"type", cat:"grep/awk/sed", q:"¿Qué comando permite reemplazar texto en un flujo, sin abrir un editor? (una palabra, 'stream editor')",
+      accept:["sed"], exp:"<code>sed</code> (Stream Editor) permite sustituciones, borrado e impresión de rangos de líneas sin abrir un editor interactivo." },
+    { type:"mc", cat:"grep/awk/sed", q:"¿Qué hace la flag <code>-i</code> de <code>sed</code>?", opts:["Aplica el cambio directamente sobre el archivo (in-place)","Ignora mayúsculas y minúsculas","Invierte el resultado de la búsqueda","Muestra el número de línea"], correct:0,
+      exp:"<code>-i</code> modifica el archivo original directamente, en vez de solo mostrar el resultado por pantalla." },
+    { type:"mc", cat:"cut/sort/uniq", q:"¿Por qué <code>sort archivo | uniq -c</code> funciona pero <code>uniq -c archivo</code> (sin ordenar antes) puede dar resultados incorrectos?", opts:["uniq solo detecta duplicados en líneas consecutivas","uniq no acepta archivos como entrada","uniq siempre ordena antes de contar","No hay diferencia real"], correct:0,
+      exp:"<code>uniq</code> compara únicamente líneas adyacentes — sin ordenar antes, los duplicados no agrupados no se detectan." },
+    { type:"type", cat:"cut/sort/uniq", q:"¿Qué comando extrae una columna de texto usando un delimitador (ej: <code>-d: -f1</code>)? (una palabra)",
+      accept:["cut"], exp:"<code>cut -d: -f1</code> extrae el primer campo usando ':' como delimitador." },
+    { type:"mc", cat:"cut/sort/uniq", q:"¿Qué hace <code>sort -n</code> que <code>sort</code> (sin flags) no hace?", opts:["Ordena numéricamente, en vez de alfabéticamente","Ordena de forma descendente","Elimina líneas duplicadas","Cuenta las líneas del archivo"], correct:0,
+      exp:"Sin <code>-n</code>, sort compara como texto: '10' quedaría antes que '2'. Con <code>-n</code> la comparación es numérica real." },
+    { type:"mc", cat:"find+xargs", q:"¿Qué busca <code>find /var/log -name '*.log' -mtime +30</code>?", opts:["Archivos .log modificados hace más de 30 días","Archivos .log de más de 30 MB","Los últimos 30 archivos .log creados","Directorios con 30 archivos .log"], correct:0,
+      exp:"<code>-mtime +30</code> filtra por fecha de modificación: más de 30 días desde la última vez que se modificó el archivo." },
+    { type:"mc", cat:"find+xargs", q:"¿Cuál es la ventaja principal de <code>find ... | xargs comando</code> sobre <code>find ... -exec comando {} \\;</code> con miles de archivos?", opts:["xargs agrupa varios archivos en menos invocaciones del comando, siendo más rápido","-exec no funciona con más de 100 archivos","xargs no requiere permisos de lectura","No hay diferencia de rendimiento"], correct:0,
+      exp:"<code>-exec ... \\;</code> lanza un proceso nuevo por cada resultado; <code>xargs</code> agrupa varios nombres por invocación, mucho más eficiente a gran escala." },
+    { type:"type", cat:"find+xargs", q:"¿Qué comando busca archivos por nombre, tipo, tamaño o fecha en un árbol de directorios? (una palabra)",
+      accept:["find"], exp:"<code>find</code> recorre recursivamente un árbol de directorios evaluando criterios como <code>-name</code>, <code>-type</code>, <code>-mtime</code>, <code>-size</code>." },
+    { type:"mc", cat:"Regex ERE", q:"¿Qué habilita la opción <code>-E</code> de <code>grep</code>?", opts:["Expresiones regulares extendidas, sin necesitar escapar metacaracteres","Búsqueda exacta sin regex","Ignorar mayúsculas y minúsculas","Contar coincidencias en vez de mostrarlas"], correct:0,
+      exp:"<code>grep -E</code> (o <code>egrep</code>) habilita ERE: <code>+</code>, <code>?</code>, <code>|</code>, <code>{}</code> funcionan sin necesidad de <code>\\</code>." },
+    { type:"mc", cat:"Regex ERE", q:"En una ERE, ¿qué significa el metacarácter <code>|</code>?", opts:["Alternancia: cualquiera de las dos opciones (OR)","Repetición de 0 o más veces","Inicio de línea","Agrupación de caracteres"], correct:0,
+      exp:"<code>|</code> funciona como un OR entre dos patrones: <code>error|warning</code> matchea cualquiera de las dos palabras." },
+    { type:"mc", cat:"Procesos", q:"¿Qué diferencia hay entre <code>kill &lt;PID&gt;</code> y <code>kill -9 &lt;PID&gt;</code>?", opts:["kill pide terminación educada (SIGTERM); kill -9 fuerza la terminación inmediata (SIGKILL)","Son exactamente lo mismo","kill -9 es más lento pero más seguro","kill solo funciona con procesos propios"], correct:0,
+      exp:"SIGTERM (kill por defecto) le permite al proceso limpiar antes de salir; SIGKILL (-9) lo mata sin darle esa oportunidad." },
+    { type:"type", cat:"Procesos", q:"¿Qué comando trae un job en segundo plano al primer plano (ej: <code>%1</code>)? (una palabra)",
+      accept:["fg"], exp:"<code>fg %1</code> retoma el job número 1 y lo trae al primer plano de la terminal." },
+    { type:"mc", cat:"Procesos", q:"¿Para qué sirve <code>nohup ./script.sh &amp;</code>?", opts:["Para que el proceso siga corriendo aunque se cierre la terminal que lo lanzó","Para ejecutar el script con más prioridad","Para ejecutar el script como root","Para registrar el script en cron automáticamente"], correct:0,
+      exp:"<code>nohup</code> ignora la señal SIGHUP que normalmente mata al proceso cuando se cierra la sesión que lo lanzó." },
+    { type:"mc", cat:"Procesos", q:"¿Qué muestra el comando <code>top</code>?", opts:["Un monitor interactivo en tiempo real de procesos, CPU y memoria","Los últimos 10 comandos ejecutados","El árbol de directorios del sistema","Los servicios systemd activos"], correct:0,
+      exp:"<code>top</code> es un monitor interactivo que se actualiza en vivo, mostrando procesos ordenados por uso de recursos." },
+    { type:"mc", cat:"Diagnóstico", q:"¿Qué comando muestra qué proceso tiene abierto un puerto específico (ej: puerto 80)?", opts:["lsof -i :80","ps -p 80","df -h 80","cut -p 80"], correct:0,
+      exp:"<code>lsof -i :puerto</code> lista los procesos que tienen abierta una conexión o socket en ese puerto." },
+    { type:"type", cat:"Diagnóstico", q:"¿Qué comando muestra los puertos TCP/UDP en escucha junto al proceso dueño? (reemplazo moderno de netstat)",
+      accept:["ss","ss -tulnp"], exp:"<code>ss -tulnp</code> reemplaza a <code>netstat</code> para ver qué puertos están en escucha y qué proceso los usa." },
+    { type:"mc", cat:"Diagnóstico", q:"¿Qué es <code>/proc</code>?", opts:["Un sistema de archivos virtual con información en vivo del kernel y los procesos","Un directorio donde se guardan binarios instalados manualmente","El directorio de configuración de procesos programados","Un alias de /var/log"], correct:0,
+      exp:"<code>/proc</code> no ocupa espacio real en disco: expone en tiempo real información del kernel y de cada proceso (<code>/proc/&lt;PID&gt;/</code>)." }
+  ]
+},
+{
+  key:"u2", name:"Unidad 2 — SSH y Administración Remota", short:"U2",
+  desc:"Autenticación por clave, ssh-keygen/ssh-copy-id, scp/sftp, hardening de sshd_config, túneles y ProxyJump.",
+  questions: [
+    { type:"mc", cat:"Criptografía SSH", q:"En la autenticación SSH por clave, ¿qué se instala en el servidor?", opts:["La clave pública","La clave privada","La contraseña del usuario","Un certificado SSL"], correct:0,
+      exp:"Solo la clave pública se copia al servidor, en <code>~/.ssh/authorized_keys</code>. La privada nunca sale de tu máquina." },
+    { type:"type", cat:"Criptografía SSH", q:"¿Qué comando genera un nuevo par de claves SSH? (una palabra)",
+      accept:["ssh-keygen"], exp:"<code>ssh-keygen -t ed25519</code> genera el par de claves pública/privada." },
+    { type:"mc", cat:"ssh-keygen/ssh-copy-id", q:"¿Por qué se recomienda el algoritmo Ed25519 sobre RSA para claves nuevas?", opts:["Claves más cortas, más rápidas de calcular y con seguridad equivalente o mayor","Porque RSA ya no funciona con OpenSSH","Porque Ed25519 no necesita passphrase nunca","Porque es el único algoritmo compatible con scp"], correct:0,
+      exp:"Ed25519 ofrece un mejor balance entre seguridad, tamaño de clave y velocidad de cálculo respecto a RSA." },
+    { type:"type", cat:"ssh-keygen/ssh-copy-id", q:"¿Qué comando copia tu clave pública al servidor de forma automática, agregándola a authorized_keys? (dos palabras con guion)",
+      accept:["ssh-copy-id"], exp:"<code>ssh-copy-id user@servidor</code> automatiza copiar la clave pública al archivo <code>authorized_keys</code> remoto." },
+    { type:"mc", cat:"ssh-keygen/ssh-copy-id", q:"¿Qué permisos debe tener <code>~/.ssh/id_ed25519</code> (la clave privada) para que SSH la acepte?", opts:["600","644","755","777"], correct:0,
+      exp:"SSH rechaza claves privadas con permisos laxos. <code>600</code> asegura que solo el dueño pueda leerla y escribirla." },
+    { type:"mc", cat:"ssh-keygen/ssh-copy-id", q:"¿Qué hace la opción <code>-i</code> en <code>ssh -i ~/.ssh/id_ctt user@srv</code>?", opts:["Especifica qué clave privada usar para la conexión","Especifica el puerto de conexión","Activa el modo interactivo","Indica que se debe pedir la contraseña"], correct:0,
+      exp:"<code>-i</code> (identity file) apunta a un archivo de clave privada específico, en vez de usar la default." },
+    { type:"mc", cat:"scp/sftp", q:"¿Qué hace <code>scp -r carpeta/ user@srv:/backup/</code>?", opts:["Copia la carpeta completa, de forma recursiva, al servidor","Copia solo los archivos del primer nivel de la carpeta","Renombra la carpeta en el servidor","Elimina la carpeta local después de copiar"], correct:0,
+      exp:"<code>-r</code> hace que <code>scp</code> copie directorios completos de forma recursiva." },
+    { type:"type", cat:"scp/sftp", q:"Dentro de una sesión sftp, ¿qué comando descarga un archivo del servidor al cliente? (una palabra)",
+      accept:["get"], exp:"En sftp, <code>get archivo</code> descarga; <code>put archivo</code> sube al servidor." },
+    { type:"mc", cat:"scp/sftp", q:"¿Cuál es la diferencia principal entre <code>scp</code> y <code>sftp</code>?", opts:["sftp permite explorar interactivamente el filesystem remoto antes de transferir; scp es más directo para un archivo puntual","Son exactamente lo mismo con distinto nombre","scp solo funciona con archivos de texto","sftp no puede subir archivos, solo bajar"], correct:0,
+      exp:"<code>sftp</code> abre una sesión navegable (ls, cd, pwd) antes de decidir qué transferir; <code>scp</code> es un comando directo desde la terminal." },
+    { type:"mc", cat:"Hardening sshd_config", q:"¿Qué previene la directiva <code>PermitRootLogin no</code>?", opts:["Que se pueda iniciar sesión SSH directamente como root","Que el usuario root exista en el sistema","Que se pueda usar sudo","La creación de nuevos usuarios"], correct:0,
+      exp:"Con esta directiva, nadie puede autenticarse por SSH directamente como root — hay que entrar como usuario normal y usar sudo." },
+    { type:"mc", cat:"Hardening sshd_config", q:"¿Qué obliga <code>PasswordAuthentication no</code>?", opts:["Que la única forma de autenticarse sea por clave pública/privada","Que las contraseñas tengan mínimo 16 caracteres","Que se use un segundo factor de autenticación","Que se deshabilite completamente SSH"], correct:0,
+      exp:"Deshabilita por completo la autenticación por contraseña, forzando el uso de claves — elimina el vector de fuerza bruta sobre contraseñas." },
+    { type:"type", cat:"Hardening sshd_config", q:"¿Qué comando valida la sintaxis de sshd_config antes de reiniciar el servicio, sin aplicar cambios? (comando + flag, ej: 'sshd -t')",
+      accept:["sshd -t","sudo sshd -t"], exp:"<code>sshd -t</code> hace un test de sintaxis. Es obligatorio antes de reiniciar, para no quedar bloqueado por un error de configuración." },
+    { type:"mc", cat:"Hardening sshd_config", q:"¿Qué limita la directiva <code>MaxAuthTries 3</code>?", opts:["La cantidad de intentos de autenticación permitidos por conexión","La cantidad de usuarios simultáneos","El tiempo máximo de una sesión","La cantidad de claves por usuario"], correct:0,
+      exp:"Corta la conexión después de ese número de intentos fallidos, dificultando ataques de fuerza bruta interactivos." },
+    { type:"mc", cat:"Hardening sshd_config", q:"¿Por qué mantener una sesión SSH abierta mientras se reinicia el servicio, después de cambiar sshd_config?", opts:["Para poder revertir el cambio si la nueva configuración bloquea el acceso","Es solo una costumbre, no tiene efecto real","Para que el servicio no se caiga durante el reinicio","Porque sshd -t no detecta todos los errores posibles"], correct:0,
+      exp:"Si la nueva configuración tiene un error que bloquea el acceso, la sesión ya abierta sigue viva y permite corregir el problema sin quedar fuera del servidor." },
+    { type:"mc", cat:"Túneles / ProxyJump", q:"¿Qué hace <code>ssh -L 8080:localhost:80 user@srv</code>?", opts:["Reenvía el puerto 8080 local hacia el puerto 80 del servidor remoto, cifrado","Abre el puerto 8080 del servidor hacia internet","Cambia el puerto de conexión SSH a 8080","Bloquea el puerto 80 en el firewall local"], correct:0,
+      exp:"<code>-L</code> (local forward) hace que conectarte a <code>localhost:8080</code> te lleve, cifrado, al puerto 80 del servidor remoto." },
+    { type:"mc", cat:"Túneles / ProxyJump", q:"¿Para qué se usa <code>ProxyJump</code> (o <code>ssh -J</code>)?", opts:["Para saltar a través de un bastion host y llegar a un servidor sin IP pública","Para acelerar la transferencia de archivos grandes","Para generar claves automáticamente","Para deshabilitar el hardening temporalmente"], correct:0,
+      exp:"<code>ProxyJump</code> permite conectar a un servidor solo alcanzable a través de otro host intermedio (bastion), típico en redes corporativas segmentadas." },
+    { type:"mc", cat:"Monitoreo / fail2ban", q:"¿Qué hace <code>fail2ban</code>?", opts:["Monitorea logs de autenticación y banea temporalmente IPs con demasiados intentos fallidos","Genera claves SSH automáticamente","Reemplaza la autenticación por contraseña","Cifra el tráfico SSH con un algoritmo extra"], correct:0,
+      exp:"Analiza logs (como los de SSH) y, al detectar intentos fallidos repetidos desde una IP, la banea temporalmente vía reglas de firewall." },
+    { type:"type", cat:"Monitoreo / fail2ban", q:"¿Qué comando muestra las sesiones de usuario activas en el sistema en este momento? (una palabra)",
+      accept:["who"], exp:"<code>who</code> lista quién está conectado al sistema, incluyendo sesiones SSH activas." },
+    { type:"mc", cat:"Monitoreo / fail2ban", q:"¿Para qué sirve <code>ssh-agent</code> junto con <code>ssh-add</code>?", opts:["Mantiene la clave privada descifrada en memoria durante la sesión, sin pedir la passphrase en cada conexión","Genera un nuevo par de claves cada vez que se conecta","Sincroniza las claves entre varios servidores automáticamente","Reemplaza por completo a ssh-copy-id"], correct:0,
+      exp:"El agente descifra la clave una vez y la mantiene disponible en memoria durante toda la sesión de trabajo." }
+  ]
+},
+{
+  key:"u3", name:"Unidad 3 — Shell Scripting y Automatización", short:"U3",
+  desc:"Estructura de scripts, variables/argumentos/getopts, bucles, funciones/trap, logging, crontab y shellcheck.",
+  questions: [
+    { type:"mc", cat:"Estructura / set -euo pipefail", q:"¿Qué hace <code>set -e</code> al inicio de un script?", opts:["Sale inmediatamente si cualquier comando falla (exit code distinto de 0)","Ignora todos los errores del script","Activa el modo debug","Muestra cada comando antes de ejecutarlo"], correct:0,
+      exp:"<code>-e</code> aborta la ejecución del script apenas un comando devuelve un código de error." },
+    { type:"mc", cat:"Estructura / set -euo pipefail", q:"¿Qué previene <code>set -u</code>?", opts:["El uso de variables no definidas, que de otro modo se expanden a vacío silenciosamente","Los errores de sintaxis","La ejecución como root","Los bucles infinitos"], correct:0,
+      exp:"Con <code>-u</code>, referenciar una variable no definida genera un error explícito en vez de expandirse a vacío sin avisar." },
+    { type:"type", cat:"Estructura / set -euo pipefail", q:"¿Qué comando le da permiso de ejecución a un script (ej: chmod +x script.sh)? Escribí solo el comando (una palabra).",
+      accept:["chmod"], exp:"<code>chmod +x script.sh</code> agrega el bit de ejecución necesario para poder correrlo con <code>./script.sh</code>." },
+    { type:"mc", cat:"Variables / getopts", q:"¿Qué representa <code>$#</code> dentro de un script?", opts:["La cantidad de argumentos posicionales recibidos","El PID del script","El último exit code","El nombre del script"], correct:0,
+      exp:"<code>$#</code> contiene el número de argumentos pasados al script." },
+    { type:"mc", cat:"Variables / getopts", q:"¿Qué contiene <code>$?</code> justo después de ejecutar un comando?", opts:["El exit code del último comando ejecutado","El PID del comando","La cantidad de argumentos","El nombre del comando"], correct:0,
+      exp:"<code>$?</code> guarda el código de salida (0 = éxito) del comando más reciente." },
+    { type:"type", cat:"Variables / getopts", q:"¿Con qué comando de Bash se procesan opciones de línea de comandos como '-s valor -v'? (una palabra)",
+      accept:["getopts"], exp:"<code>getopts</code> procesa flags con o sin argumento (<code>OPTARG</code>) dentro de un bucle <code>while</code>." },
+    { type:"mc", cat:"Bucles", q:"¿Por qué <code>while IFS= read -r linea; do ...; done &lt; archivo</code> es más seguro que <code>for x in $(cat archivo)</code>?", opts:["Procesa línea por línea sin sufrir word-splitting ni expansión de comodines","Es la única forma de leer un archivo en Bash","while siempre es más rápido que for","No hay diferencia real"], correct:0,
+      exp:"<code>for x in $(cat archivo)</code> separa por espacios, rompiendo con líneas que contienen espacios; <code>while read</code> procesa línea por línea de forma segura." },
+    { type:"mc", cat:"Bucles", q:"¿Cuál es el comportamiento de un bucle <code>until</code>?", opts:["Repite mientras la condición sea falsa, hasta que se cumpla","Es idéntico a for","Ejecuta el bloque una sola vez","Solo funciona con números"], correct:0,
+      exp:"<code>until condición; do ...; done</code> es la lógica inversa de <code>while</code>: repite hasta que la condición se vuelva verdadera." },
+    { type:"mc", cat:"Funciones / trap", q:"¿Por qué se usa <code>local</code> para las variables dentro de una función?", opts:["Para evitar que colisionen con variables globales del mismo nombre","Porque Bash lo exige por sintaxis","Para que la variable persista fuera de la función","Para exportarla automáticamente"], correct:0,
+      exp:"Sin <code>local</code>, una variable asignada en una función es global por defecto y puede pisar otra con el mismo nombre en el resto del script." },
+    { type:"mc", cat:"Funciones / trap", q:"¿Para qué sirve <code>trap limpiar EXIT</code> en un script?", opts:["Garantiza que la función limpiar se ejecute siempre al terminar, con éxito o error","Detiene el script si limpiar falla","Solo se ejecuta si el usuario presiona Ctrl+C","Registra automáticamente un log de errores"], correct:0,
+      exp:"<code>trap ... EXIT</code> asegura la ejecución de esa función sin importar cómo termine el script — ideal para limpiar archivos temporales." },
+    { type:"mc", cat:"Funciones / trap", q:"Por convención Unix, ¿qué código de retorno indica éxito?", opts:["0","1","-1","Cualquier número"], correct:0,
+      exp:"La convención POSIX es 0 = éxito, cualquier valor distinto de 0 indica algún tipo de error." },
+    { type:"type", cat:"Logging", q:"¿Qué comando envía un mensaje al syslog del sistema (visible con journalctl)? (una palabra)",
+      accept:["logger"], exp:"<code>logger -t tag 'mensaje'</code> registra el mensaje en el syslog del sistema." },
+    { type:"mc", cat:"Logging", q:"¿Qué combina el patrón de 'logging dual' en scripts de administración?", opts:["Registro en el syslog del sistema (logger) y en un archivo propio con fecha","Dos copias idénticas del mismo log","Logs en dos idiomas distintos","Envío por email y por SMS simultáneo"], correct:0,
+      exp:"El logging dual combina la integración con el syslog centralizado y un archivo propio, fácil de revisar manualmente." },
+    { type:"mc", cat:"Logging", q:"¿Para qué se usa un heredoc (<code>cat &lt;&lt;EOF ... EOF</code>)?", opts:["Para generar un bloque de texto de varias líneas sin encadenar múltiples echo","Para leer datos del usuario de forma interactiva","Para comprimir archivos","Para declarar una función anónima"], correct:0,
+      exp:"El heredoc permite escribir un bloque multilínea, con variables interpoladas, de forma legible." },
+    { type:"mc", cat:"crontab", q:"¿Cuál es el orden correcto de los 5 campos de tiempo en crontab?", opts:["minuto, hora, día del mes, mes, día de la semana","hora, minuto, día del mes, mes, día de la semana","día de la semana, hora, minuto, mes, día del mes","minuto, hora, mes, día del mes, día de la semana"], correct:0,
+      exp:"El formato es: <code>minuto hora dia_mes mes dia_semana comando</code>." },
+    { type:"type", cat:"crontab", q:"¿Qué comando abre el editor para programar tareas periódicas del usuario actual? (dos palabras: comando + flag, ej: 'crontab -e')",
+      accept:["crontab -e"], exp:"<code>crontab -e</code> abre el editor configurado por defecto para editar las tareas programadas del usuario." },
+    { type:"mc", cat:"crontab", q:"¿Qué significa <code>*/15 * * * *</code> en una línea de crontab?", opts:["Se ejecuta cada 15 minutos","Se ejecuta a las 15:00 todos los días","Se ejecuta el día 15 de cada mes","Se ejecuta 15 veces seguidas"], correct:0,
+      exp:"<code>*/15</code> en el campo de minutos significa 'cada 15 unidades': minuto 0, 15, 30 y 45 de cada hora." },
+    { type:"mc", cat:"crontab", q:"¿Por qué es obligatorio usar rutas absolutas en los comandos programados por cron?", opts:["Porque cron ejecuta con un PATH muy reducido, distinto al de una shell interactiva","Porque cron no permite rutas relativas por sintaxis","Porque las rutas absolutas son más rápidas","Porque cron corre siempre como root"], correct:0,
+      exp:"El entorno de cron tiene un PATH mínimo — un comando que funciona a mano puede fallar en cron si depende de rutas relativas." },
+    { type:"type", cat:"shellcheck", q:"¿Qué herramienta de análisis estático detecta errores comunes de Bash antes de ejecutar el script? (una palabra)",
+      accept:["shellcheck"], exp:"<code>shellcheck script.sh</code> revisa el script sin ejecutarlo y señala patrones propensos a bugs, como variables sin comillas." },
+    { type:"mc", cat:"shellcheck", q:"¿Qué tipo de problemas detecta principalmente shellcheck?", opts:["Errores comunes de Bash: variables sin comillas, comparaciones mal formadas, código problemático","Vulnerabilidades de red del servidor","Errores de permisos del sistema de archivos","Errores de ortografía en comentarios"], correct:0,
+      exp:"Es un analizador estático enfocado en errores y malas prácticas específicas de scripts Bash/sh." }
+  ]
+}
+];
+
+/* ===================== ESTADO ===================== */
+const LETTERS = "ABCDEF";
+/* Baraja las opciones de cada pregunta mc/multi una vez al cargar la página,
+   así la respuesta correcta no queda siempre en la posición A. */
+(function shuffleAllOptions(){
+  function shuffleQ(q){
+    if (q.type !== "mc" && q.type !== "multi") return;
+    const order = q.opts.map((_,i)=>i);
+    for (let i=order.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      const tmp = order[i]; order[i]=order[j]; order[j]=tmp;
+    }
+    const newOpts = order.map(oi => q.opts[oi]);
+    let newCorrect;
+    if (q.type === "multi") {
+      const set = new Set(q.correct);
+      newCorrect = order.map((oi,ni)=> set.has(oi) ? ni : -1).filter(x=>x>=0).sort((a,b)=>a-b);
+    } else {
+      newCorrect = order.indexOf(q.correct);
+    }
+    q.opts = newOpts;
+    q.correct = newCorrect;
+  }
+  MODULES.forEach(m => m.questions.forEach(shuffleQ));
+})();
+
+const state = {}; // por módulo: { qStatus:[], userAns:[] }
+MODULES.forEach(m => { state[m.key] = { qStatus: new Array(m.questions.length).fill(null), userAns: new Array(m.questions.length).fill(null) }; });
+
+let curMod = null;   // key del módulo activo
+let idx = 0;
+let navOpen = false;
+let answeredThisView = false; // si la pregunta actual ya fue resuelta en esta visita (para mostrar feedback)
+
+const homeview = document.getElementById("homeview");
+const backBtn = document.getElementById("backBtn");
+const progress = document.getElementById("progress");
+const qcard = document.getElementById("qcard");
+const qbody = document.getElementById("qbody");
+const tlabel = document.getElementById("tlabel");
+const pbar = document.getElementById("pbar");
+const ptext = document.getElementById("ptext");
+const ppend = document.getElementById("ppend");
+const navToggleBtn = document.getElementById("navtoggle");
+const navToggleTxt = document.getElementById("navtoggletxt");
+const navLegend = document.getElementById("navlegend");
+const navGrid = document.getElementById("navgrid");
+const rcard = document.getElementById("rcard");
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function norm(s){ return String(s).trim().toLowerCase().replace(/\s+/g," "); }
+
+/* ===================== HOME ===================== */
+function renderHome(){
+  curMod = null;
+  backBtn.style.display = "none";
+  progress.style.display = "none";
+  navToggleBtn.style.display = "none";
+  navLegend.style.display = "none";
+  navGrid.classList.remove("open");
+  qcard.style.display = "none";
+  rcard.classList.remove("show");
+
+  let html = "";
+  MODULES.forEach((m, i) => {
+    const st = state[m.key];
+    const total = m.questions.length;
+    const ok = st.qStatus.filter(s=>s==='ok').length;
+    const no = st.qStatus.filter(s=>s==='no').length;
+    const flag = st.qStatus.filter(s=>s==='flag').length;
+    const started = ok+no+flag > 0;
+    html += '<div class="modcard">' +
+            '<div class="mhead"><span class="modnum">' + (i+1) + '</span><span class="modtitle">' + esc(m.name.replace(/^Unidad \d+ — /,"")) + '</span></div>' +
+            '<div class="moddesc">' + esc(m.desc) + '</div>' +
+            '<div class="modmeta"><span><b>' + total + '</b> preguntas</span>' +
+            (started ? '<span>✔ <b>' + ok + '</b> · ✘ <b>' + no + '</b> · ⚑ <b>' + flag + '</b></span>' : '<span>Sin empezar</span>') + '</div>' +
+            '<div class="modfoot"><button type="button" class="btn primary" data-mod="' + m.key + '">' + (started ? "Continuar →" : "Practicar →") + '</button></div>' +
+            '</div>';
+  });
+  homeview.innerHTML = html;
+  [...homeview.querySelectorAll("[data-mod]")].forEach(b => b.addEventListener("click", () => enterModule(b.dataset.mod)));
+}
+backBtn.addEventListener("click", renderHome);
+
+/* ===================== ENTRAR A UN MÓDULO ===================== */
+function enterModule(key){
+  curMod = key;
+  const st = state[key];
+  // arrancar en la primer pregunta pendiente (sin ver o marcada), o en 0 si ya está todo resuelto
+  let start = st.qStatus.findIndex(s => s===null || s==='flag');
+  idx = start >= 0 ? start : 0;
+  answeredThisView = false;
+
+  homeview.innerHTML = "";
+  backBtn.style.display = "";
+  progress.style.display = "flex";
+  navToggleBtn.style.display = "";
+  navLegend.style.display = "flex";
+  qcard.style.display = "";
+  rcard.classList.remove("show");
+  buildNavGrid();
+  render();
+}
+
+/* ===================== NAVEGADOR ===================== */
+function buildNavGrid(){
+  const m = MODULES.find(x=>x.key===curMod);
+  let html = "";
+  for (let i=0;i<m.questions.length;i++){
+    html += '<button type="button" class="navcell" data-i="' + i + '">' + (i+1) + '</button>';
+  }
+  navGrid.innerHTML = html;
+  [...navGrid.querySelectorAll(".navcell")].forEach(c => c.addEventListener("click", () => {
+    idx = +c.dataset.i;
+    answeredThisView = false;
+    render();
+  }));
+  updateNavGrid();
+}
+function updateNavGrid(){
+  const m = MODULES.find(x=>x.key===curMod);
+  const st = state[curMod];
+  const pend = st.qStatus.filter(s=>s===null||s==='flag').length;
+  navToggleTxt.textContent = "Ver todas las preguntas (" + pend + " pendientes)";
+  ppend.textContent = pend + " pendiente" + (pend===1?"":"s");
+  [...navGrid.querySelectorAll(".navcell")].forEach((c,i) => {
+    c.className = "navcell" + (st.qStatus[i] ? " " + st.qStatus[i] : "") + (i===idx ? " current" : "");
+  });
+}
+navToggleBtn.addEventListener("click", () => {
+  navOpen = !navOpen;
+  navToggleBtn.classList.toggle("open", navOpen);
+  navGrid.classList.toggle("open", navOpen);
+});
+
+function firstPendingAfter(i, n){
+  for (let step=1; step<=n; step++){
+    const k = (i+step)%n;
+    const s = state[curMod].qStatus[k];
+    if (s===null || s==='flag') return k;
+  }
+  return -1;
+}
+
+/* ===================== RENDER PREGUNTA ===================== */
+function render(){
+  const m = MODULES.find(x=>x.key===curMod);
+  const q = m.questions[idx];
+  const st = state[curMod];
+  const status = st.qStatus[idx];
+  const resolved = status === 'ok' || status === 'no';
+
+  tlabel.textContent = m.short.toLowerCase().replace(".","") + "_" + String(idx+1).padStart(3,"0") + ".sh";
+  ptext.textContent = "[ " + (idx+1) + "/" + m.questions.length + " ]";
+  pbar.style.width = ((idx+1)/m.questions.length*100) + "%";
+  updateNavGrid();
+
+  let html = "";
+  html += '<span class="badge' + (status==='flag' ? ' flagged' : '') + '">' + (status==='flag' ? "⚑ MARCADA" : "PREGUNTA") + ' ' + (idx+1) + "/" + m.questions.length + '</span><span class="cat">' + m.name.replace(/^Unidad \d+ — /,"") + " · " + q.cat + "</span>";
+  html += '<div class="qtext">' + q.q + "</div>";
+
+  if (q.type === "type") {
+    html += '<div class="hint">Escribí el comando (en minúscula, sin modificadores) y presioná Enter o Comprobar.</div>';
+    const prevVal = resolved ? (st.userAns[idx] || "") : "";
+    html += '<div class="typewrap"><input type="text" id="typeInput" autocomplete="off" spellcheck="false" placeholder="comando" value="' + esc(prevVal) + '"' + (resolved ? " disabled" : "") + '>';
+    if (!resolved) html += '<button type="button" class="btn primary" id="checkBtn">Comprobar</button>';
+    html += "</div>";
+  } else {
+    const multi = q.type === "multi";
+    html += '<div class="hint">' + (multi ? "Seleccioná todas las que correspondan." : "Marcá una opción.") + "</div>";
+    html += '<div class="opts" role="group">';
+    q.opts.forEach((o, i) => {
+      html += '<button type="button" class="opt' + (multi ? " multi" : "") + '"' + (resolved ? " disabled" : "") + ' data-i="' + i + '">' +
+              '<span class="let">' + LETTERS[i] + '</span><span class="txt">' + esc(o) + "</span></button>";
+    });
+    html += "</div>";
+  }
+
+  html += '<div class="feed" id="feed"></div>';
+  html += '<div class="actions" id="actionsRow"></div>';
+  qbody.innerHTML = html;
+
+  if (resolved) {
+    showResolvedView(q, status, st.userAns[idx]);
+  }
+
+  wireQuestionInteractions(m, q, st);
+  buildActionsRow(m, q, st, resolved);
+}
+
+function showResolvedView(q, status, ans){
+  const feed = document.getElementById("feed");
+  const ok = status === 'ok';
+  feed.className = "feed show " + (ok ? "good" : "bad");
+  feed.innerHTML = "<b class='tag'>" + (ok ? "✔ Correcta" : "✘ Incorrecta") + "</b><br>" + q.exp;
+
+  if (q.type === "type") {
+    const input = document.getElementById("typeInput");
+    input.classList.add(ok ? "correct" : "wrong");
+    if (!ok) {
+      const acc = document.createElement("div");
+      acc.className = "accepted";
+      acc.textContent = "Válidas: " + q.accept.join(" / ");
+      feed.appendChild(acc);
+    }
+  } else {
+    const optEls = [...qbody.querySelectorAll(".opt")];
+    const correctSet = q.type === "multi" ? new Set(q.correct) : new Set([q.correct]);
+    const pickedSet = new Set(Array.isArray(ans) ? ans : (ans!==null && ans!==undefined ? [ans] : []));
+    optEls.forEach(el => {
+      const i = +el.dataset.i;
+      if (correctSet.has(i)) { el.classList.add("correct"); el.insertAdjacentHTML("beforeend",'<span class="mark ok">✔</span>'); }
+      else if (pickedSet.has(i)) { el.classList.add("wrong"); el.insertAdjacentHTML("beforeend",'<span class="mark no">✘</span>'); }
+      else { el.classList.add("dim"); }
+    });
+  }
+}
+
+function wireQuestionInteractions(m, q, st){
+  const status = st.qStatus[idx];
+  const resolved = status === 'ok' || status === 'no';
+  if (resolved) return;
+
+  if (q.type === "type") {
+    const input = document.getElementById("typeInput");
+    const checkBtn = document.getElementById("checkBtn");
+    const doCheck = () => {
+      const val = input.value;
+      if (!val.trim()) { input.focus(); return; }
+      const ok = q.accept.some(a => norm(a) === norm(val));
+      st.userAns[idx] = val.trim();
+      st.qStatus[idx] = ok ? 'ok' : 'no';
+      input.disabled = true;
+      answeredThisView = true;
+      render();
+    };
+    checkBtn.addEventListener("click", doCheck);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") doCheck(); });
+  } else {
+    const multi = q.type === "multi";
+    const optEls = [...qbody.querySelectorAll(".opt")];
+    if (!multi) {
+      optEls.forEach(el => el.addEventListener("click", () => {
+        const i = +el.dataset.i;
+        st.userAns[idx] = i;
+        st.qStatus[idx] = (i === q.correct) ? 'ok' : 'no';
+        answeredThisView = true;
+        render();
+      }));
+    } else {
+      const picked = new Set();
+      optEls.forEach(el => el.addEventListener("click", () => {
+        const i = +el.dataset.i;
+        if (picked.has(i)) { picked.delete(i); el.classList.remove("picked"); }
+        else { picked.add(i); el.classList.add("picked"); }
+      }));
+      qbody._pickedSet = picked;
+    }
+  }
+}
+
+function buildActionsRow(m, q, st, resolved){
+  const row = document.getElementById("actionsRow");
+  const status = st.qStatus[idx];
+  const pendCount = st.qStatus.filter(s=>s===null||s==='flag').length;
+  let html = "";
+
+  html += '<button type="button" class="btn" id="prevBtn"' + (idx===0 ? " disabled" : "") + '>← Anterior</button>';
+
+  if (!resolved && q.type === "multi") {
+    html += '<button type="button" class="btn primary" id="checkMultiBtn">Comprobar</button>';
+  }
+  if (!resolved) {
+    html += '<button type="button" class="btn flag" id="flagBtn">' + (status==='flag' ? "⚑ Ya marcada" : "⚑ Marcar y saltar") + '</button>';
+  }
+  html += '<button type="button" class="btn" id="nextBtn"' + (idx===m.questions.length-1 ? " disabled" : "") + '>Siguiente →</button>';
+  html += '<span class="spacer"></span>';
+  if (pendCount > 0) {
+    html += '<button type="button" class="btn primary" id="pendBtn">Pendiente siguiente (' + pendCount + ') →</button>';
+  }
+  html += '<button type="button" class="btn finish" id="finishBtn">Finalizar unidad</button>';
+  row.innerHTML = html;
+
+  const prevBtn = document.getElementById("prevBtn");
+  if (prevBtn) prevBtn.addEventListener("click", () => { idx--; render(); });
+  const nextBtn = document.getElementById("nextBtn");
+  if (nextBtn) nextBtn.addEventListener("click", () => { idx++; render(); });
+  const pendBtn = document.getElementById("pendBtn");
+  if (pendBtn) pendBtn.addEventListener("click", () => {
+    const nxt = firstPendingAfter(idx, m.questions.length);
+    if (nxt >= 0) { idx = nxt; render(); }
+  });
+  const flagBtn = document.getElementById("flagBtn");
+  if (flagBtn && status !== 'flag') flagBtn.addEventListener("click", () => {
+    st.qStatus[idx] = 'flag';
+    const nxt = firstPendingAfter(idx, m.questions.length);
+    idx = nxt >= 0 ? nxt : idx;
+    render();
+  });
+  const checkMultiBtn = document.getElementById("checkMultiBtn");
+  if (checkMultiBtn) checkMultiBtn.addEventListener("click", () => {
+    const picked = qbody._pickedSet || new Set();
+    if (picked.size === 0) return;
+    const arr = [...picked].sort((a,b)=>a-b);
+    const correctArr = q.correct.slice().sort((a,b)=>a-b);
+    const ok = arr.length === correctArr.length && arr.every((v,i)=>v===correctArr[i]);
+    st.userAns[idx] = arr;
+    st.qStatus[idx] = ok ? 'ok' : 'no';
+    render();
+  });
+  document.getElementById("finishBtn").addEventListener("click", () => tryFinish(m));
+}
+
+function tryFinish(m){
+  const st = state[curMod];
+  const pend = st.qStatus.filter(s=>s===null||s==='flag').length;
+  if (pend > 0) {
+    const ok = confirm("Todavía tenés " + pend + " pregunta" + (pend===1?"":"s") + " pendiente" + (pend===1?"":"s") + " (sin ver o marcadas).\n¿Querés ver el resumen igual?");
+    if (!ok) return;
+  }
+  showSummary(m);
+}
+
+/* ===================== RESUMEN DE MÓDULO ===================== */
+function letterList(idxArr, opts){ return idxArr.map(i => LETTERS[i] + ". " + opts[i]).join("<br>"); }
+
+function showSummary(m){
+  const st = state[curMod];
+  qcard.style.display = "none";
+  progress.style.display = "none";
+  navToggleBtn.style.display = "none";
+  navLegend.style.display = "none";
+  navGrid.classList.remove("open");
+  rcard.classList.add("show");
+
+  const ok = st.qStatus.filter(s=>s==='ok').length;
+  const no = st.qStatus.filter(s=>s==='no').length;
+  const pend = st.qStatus.filter(s=>s===null||s==='flag').length;
+  const total = m.questions.length;
+  const answered = ok+no;
+  const pct = answered>0 ? Math.round(ok/answered*100) : 0;
+
+  let html = "";
+  html += '<div style="font-family:var(--mono);font-size:13px;color:var(--mut);margin-bottom:10px">$ ./practica_s2.sh --resumen ' + m.short + '</div>';
+  html += '<div class="score-big">' + ok + '<span class="of"> / ' + answered + ' contestadas</span></div>';
+  html += '<div class="msg">' + msgFor(pct, answered) + '</div>';
+  html += '<div class="statrow">' +
+          '<div class="stat ok"><div class="t">CORRECTAS</div><div class="v">' + ok + '</div></div>' +
+          '<div class="stat no"><div class="t">INCORRECTAS</div><div class="v">' + no + '</div></div>' +
+          '<div class="stat pend"><div class="t">PENDIENTES</div><div class="v">' + pend + '</div></div>' +
+          '</div>';
+
+  html += '<div class="revtitle">Detalle de lo contestado</div><div class="revwrap">';
+  let any = false;
+  m.questions.forEach((q,i) => {
+    const s = st.qStatus[i];
+    if (s!=='ok' && s!=='no') return;
+    any = true;
+    const yourAns = q.type==='type' ? esc(st.userAns[i]) :
+                    q.type==='multi' ? letterList(st.userAns[i], q.opts) :
+                    LETTERS[st.userAns[i]] + ". " + esc(q.opts[st.userAns[i]]);
+    const correctAns = q.type==='type' ? q.accept.join(" / ") :
+                        q.type==='multi' ? letterList(q.correct, q.opts) :
+                        LETTERS[q.correct] + ". " + esc(q.opts[q.correct]);
+    html += '<div class="revrow"><span class="rn">' + (i+1) + '.</span><span class="rq">' + q.q +
+            " <span class='" + (s==='ok'?'mkok':'mkno') + "'>" + (s==='ok'?'✔':'✘') + "</span>" +
+            "<div class='rya'>Tu respuesta: " + yourAns + (s==='no' ? "<br>Correcta: " + correctAns : "") + "</div></span></div>";
+  });
+  if (!any) html += '<div class="revrow"><span class="rq">Todavía no contestaste ninguna pregunta de esta unidad.</span></div>';
+  html += "</div>";
+
+  html += '<div class="actions" style="margin-top:20px">' +
+          (pend>0 ? '<button type="button" class="btn primary" id="keepGoing">Seguir practicando (' + pend + ') →</button>' : '') +
+          '<button type="button" class="btn" id="share">Compartir</button>' +
+          '<button type="button" class="btn" id="copy">Copiar</button>' +
+          '<button type="button" class="btn" id="retryMod">Reiniciar unidad</button>' +
+          '<button type="button" class="btn" id="toHome">Volver a unidades</button>' +
+          '<span class="copied" id="copied">copiado ✔</span></div>';
+
+  document.getElementById("rbody").innerHTML = html;
+
+  const text = "Práctica · " + m.name + "\n" + ok + "/" + answered + " correctas (" + pct + "%)\n" +
+               "✔ " + ok + "  ✘ " + no + "  ⚑ pendientes " + pend;
+  const flash = () => { const c = document.getElementById("copied"); c.classList.add("on"); setTimeout(()=>c.classList.remove("on"),1800); };
+  const copy = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash, flash);
+    else { const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} document.body.removeChild(ta); flash(); }
+  };
+  document.getElementById("copy").addEventListener("click", copy);
+  document.getElementById("share").addEventListener("click", () => {
+    if (navigator.share) navigator.share({text}).catch(()=>{}); else copy();
+  });
+  const keepGoing = document.getElementById("keepGoing");
+  if (keepGoing) keepGoing.addEventListener("click", () => {
+    const nxt = firstPendingAfter(-1, m.questions.length);
+    idx = nxt >= 0 ? nxt : 0;
+    rcard.classList.remove("show");
+    progress.style.display = "flex";
+    navToggleBtn.style.display = "";
+    navLegend.style.display = "flex";
+    qcard.style.display = "";
+    render();
+  });
+  document.getElementById("retryMod").addEventListener("click", () => {
+    state[curMod] = { qStatus: new Array(m.questions.length).fill(null), userAns: new Array(m.questions.length).fill(null) };
+    enterModule(curMod);
+  });
+  document.getElementById("toHome").addEventListener("click", renderHome);
+}
+
+function msgFor(pct, answered){
+  if (answered===0) return "Todavía no contestaste nada en esta unidad.";
+  if (pct===100) return "¡Perfecto! Todas correctas.";
+  if (pct>=80) return "Muy buen dominio de esta unidad.";
+  if (pct>=60) return "Bien encaminado — repasá las que fallaste.";
+  if (pct>=40) return "A mitad de camino, conviene repasar el material.";
+  return "Conviene repasar la unidad antes de seguir.";
+}
+
+renderHome();
+</script>
+</body>
+</html>

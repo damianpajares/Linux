@@ -23,7 +23,7 @@
   .prompt{font-family:var(--mono);font-size:14px;margin-bottom:6px;word-break:break-all}
   .prompt .u{color:var(--green)} .prompt .p{color:var(--blue)}
   h1{font-size:clamp(24px,5vw,36px);font-weight:700;margin:14px 0 6px}
-  .sub{color:var(--mut);font-size:15.5px;line-height:1.5;margin-bottom:28px;max-width:640px}
+  .sub{color:var(--mut);font-size:15.5px;line-height:1.5;margin-bottom:28px;max-width:660px}
 
   /* ---- hero: terminal con árbol del repo ---- */
   .term{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:34px}
@@ -35,29 +35,48 @@
   .treecmd .arg{color:var(--txt)}
   pre.tree{font-family:var(--mono);font-size:13.5px;line-height:1.85;white-space:pre;color:var(--mut)}
   pre.tree .dir{color:var(--blue);font-weight:700}
-  .tree a{color:inherit;text-decoration:none;border-bottom:1px dashed transparent;transition:border-color .12s,color .12s}
-  .tree a.f-pptx{color:var(--orange)}
-  .tree a.f-html{color:var(--green-soft)}
-  .tree a:hover{border-bottom-color:currentColor}
-  .tree .tag{color:var(--mut);font-size:12px}
+  pre.tree .file{color:var(--txt)}
+  pre.tree .tag{color:var(--mut);font-size:12px}
   @media (max-width:560px){
     pre.tree{font-size:12px}
-    .tree .tag{display:none}
+    pre.tree .tag{display:none}
   }
   .treefoot{margin-top:14px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .treefoot a{color:var(--green-soft)}
 
-  /* ---- secciones con tarjetas ---- */
-  .section{margin-bottom:34px}
-  .sechead{display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap}
-  .sechead h2{font-size:18px;font-weight:700}
-  .sechead .path{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  /* ---- secciones de módulo ---- */
+  .modsection{margin-bottom:44px}
+  .modhead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .modhead h2{font-size:21px;font-weight:700}
+  .modhead .path{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .moddesc{color:var(--mut);font-size:14.5px;margin-bottom:20px;max-width:680px;line-height:1.5}
 
+  .subhead{font-family:var(--mono);font-size:12.5px;color:var(--mut);text-transform:uppercase;
+           letter-spacing:.04em;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
+  .subhead .n{color:var(--green-soft)}
+
+  /* ---- lista compacta (diapositivas) ---- */
+  .flist{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:6px}
+  .fitem{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);
+         font-size:13.5px;transition:background .12s}
+  .fitem:last-child{border-bottom:none}
+  .fitem:hover{background:var(--bg)}
+  .fitem .fico{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--orange);
+               background:var(--orange-bg);border:1px solid var(--orange-line);border-radius:5px;padding:3px 7px}
+  .fitem .fname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fitem a.fopenlink{font-family:var(--mono);font-size:12px;color:var(--mut);text-decoration:none;flex:0 0 auto}
+  .fitem a.fopenlink:hover{color:var(--txt)}
+
+  /* ---- tarjetas descriptivas (guías, prácticas, evaluaciones, labs) ---- */
   .fcard{display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);
          border-radius:10px;padding:16px 18px;margin-bottom:10px;transition:border-color .15s}
   .fcard:hover{border-color:var(--mut)}
+  .fcard.soon{opacity:.55}
+  .fcard.soon:hover{border-color:var(--border)}
   .ficon{flex:0 0 44px;height:44px;border-radius:9px;display:grid;place-items:center;
          font-family:var(--mono);font-size:11px;font-weight:700}
-  .ficon.pptx{background:var(--orange-bg);border:1px solid var(--orange-line);color:var(--orange)}
+  .ficon.docx{background:var(--blue-bg);border:1px solid var(--blue-line);color:var(--blue)}
+  .ficon.md{background:var(--orange-bg);border:1px solid var(--orange-line);color:var(--orange)}
   .ficon.html{background:var(--green-bg);border:1px solid var(--green-line);color:var(--green-soft)}
   .finfo{flex:1;min-width:0}
   .fname{font-weight:700;font-size:15.5px}
@@ -68,17 +87,25 @@
          border-radius:5px;padding:2px 8px;white-space:nowrap}
   .badge.practica{color:var(--green-soft);background:var(--green-bg);border:1px solid var(--green-line)}
   .badge.formal{color:var(--red);background:var(--red-bg);border:1px solid var(--red-line)}
-  .badge.eval{color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-line)}
-  .badge.slides{color:var(--orange);background:var(--orange-bg);border:1px solid var(--orange-line)}
+  .badge.guia{color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-line)}
+  .badge.lab{color:var(--orange);background:var(--orange-bg);border:1px solid var(--orange-line)}
+  .badge.soon{color:var(--mut);background:var(--bg);border:1px solid var(--border)}
   .fopen{flex:0 0 auto;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--txt);
          background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 16px;
          text-decoration:none;white-space:nowrap;transition:filter .15s,border-color .15s}
   .fopen:hover{filter:brightness(1.3);border-color:var(--mut)}
+  .fopen.disabled{pointer-events:none;opacity:.4}
   @media (max-width:560px){
     .fcard{flex-direction:column;align-items:stretch}
     .ficon{margin-bottom:2px}
     .fopen{width:100%;text-align:center;margin-top:4px}
   }
+
+  .roadmapcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;
+               margin-top:8px;margin-bottom:10px}
+  .roadmapcard .rt{font-weight:700;font-size:15px;margin-bottom:4px}
+  .roadmapcard .rd{color:var(--mut);font-size:13.5px;line-height:1.5}
+  .roadmapcard a{color:var(--green-soft);font-family:var(--mono);font-size:13px}
 
   footer{margin-top:10px;font-family:var(--mono);font-size:12.5px;color:var(--mut);line-height:1.7}
   footer .g{color:var(--green)}
@@ -89,7 +116,7 @@
 <div class="wrap">
   <div class="prompt"><span class="u">ariel@linux-materiales</span>:<span class="p">~</span>$ ls -la</div>
   <h1>Materiales de Linux</h1>
-  <div class="sub">Presentaciones y formularios interactivos para Linux 1, Linux III (systemd) y Redes POSIX &amp; Bash Script — todo en un solo lugar, listo para repasar antes de cada clase o escrito.</div>
+  <div class="sub">CTT · Técnico en Redes y Software — Diapositivas, guías teórico-prácticas, contenido complementario y evaluaciones interactivas de Linux I, Linux II (Redes POSIX — SHSCRIPT) y Linux III (Redes POSIX — Servicios), organizadas por módulo.</div>
 
   <div class="term">
     <div class="tbar">
@@ -101,99 +128,243 @@
     <div class="tbody">
       <div class="treecmd">$ tree <span class="arg">-L 2 --dirsfirst</span></div>
       <pre class="tree"><span class="dir">linux-materiales/</span>
-├── <span class="dir">linux1-bash-scripting/</span>
-│   ├── <a class="f-pptx" href="Bash_Scripting_Linux1.pptx" target="_blank" rel="noopener">Bash_Scripting_Linux1.pptx</a>          <span class="tag">presentación · 10 diapositivas</span>
-│   └── <a class="f-pptx" href="Quiz_Comandos_Linux1.pptx" target="_blank" rel="noopener">Quiz_Comandos_Linux1.pptx</a>           <span class="tag">quiz en diapositivas · 12 preguntas</span>
-├── <span class="dir">aso3-escrito1/</span>
-│   └── <a class="f-html" href="Escrito1_Linux_Evaluacion.html" target="_blank" rel="noopener">Escrito1_Linux_Evaluacion.html</a>      <span class="tag">evaluación web · 21 preguntas</span>
-├── <span class="dir">linux3-systemd-u1/</span>
-│   ├── <a class="f-html" href="Evaluacion_Linux3_U1_100preguntas.html" target="_blank" rel="noopener">Evaluacion_Linux3_U1_100preguntas.html</a>  <span class="tag">práctica · 100 preguntas</span>
-│   └── <a class="f-html" href="Evaluacion_Formal_Linux3_U1.html" target="_blank" rel="noopener">Evaluacion_Formal_Linux3_U1.html</a>        <span class="tag">evaluación formal · 100 preguntas</span>
-└── <span class="dir">redes-posix-bashscript/</span>
-    └── <a class="f-html" href="Practica_Redes_POSIX_BashScript.html" target="_blank" rel="noopener">Practica_Redes_POSIX_BashScript.html</a>    <span class="tag">práctica · 5 módulos · 175 preguntas</span></pre>
-      <div class="treefoot">4 directorios, 6 archivos</div>
+├── <span class="dir">S1/</span>  <span class="tag">Linux I — Introducción a Linux · 9 archivos</span>
+├── <span class="dir">S2/</span>  <span class="tag">Linux II — Redes POSIX SHSCRIPT · 9 archivos</span>
+├── <span class="dir">S3/</span>  <span class="tag">Linux III — Redes POSIX Servicios · 9 archivos</span>
+├── <span class="file">ROADMAP.md</span>  <span class="tag">qué falta por construir, módulo a módulo</span>
+├── <span class="file">provision.sh</span> / <span class="file">provision.md</span>  <span class="tag">script de provisionamiento del entorno</span>
+└── <span class="file">index.html</span>  <span class="tag">este archivo</span></pre>
+      <div class="treefoot">3 módulos, 27 archivos de contenido — <a href="ROADMAP.md">ver ROADMAP.md</a> para el detalle de qué falta.</div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="sechead"><h2>Linux 1 — Bash Scripting</h2><span class="path">/linux1-bash-scripting</span></div>
+  <!-- ============ S1 ============ -->
+  <div class="modsection">
+    <div class="modhead"><h2>Linux I — Introducción a Linux</h2><span class="path">/S1</span></div>
+    <div class="moddesc">Principios de GNU/Linux (FHS, usuarios y permisos), línea de comandos POSIX (pipes, filtros, procesos) y bash scripting básico. 3 unidades · 16 semanas.</div>
 
-    <div class="fcard">
-      <div class="ficon pptx">PPTX</div>
-      <div class="finfo">
-        <div class="fname">Bash_Scripting_Linux1.pptx</div>
-        <div class="fdesc">Resumen de fundamentos: shebang, permisos de ejecución, variables, parámetros posicionales, condicionales, funciones y debugging (set -e, bash -x).</div>
-        <div class="fmeta"><span class="badge slides">10 diapositivas</span></div>
-      </div>
-      <a class="fopen" href="Bash_Scripting_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a>
+    <div class="subhead">Diapositivas <span class="n">· 7</span></div>
+    <div class="flist">
+      <div class="fitem"><span class="fico">PDF</span><span class="fname">Introducción a Linux.pdf</span><a class="fopenlink" href="S1/Introducci%C3%B3n%20a%20Linux.pdf" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Linux1_Clase1_CTT.pptx</span><a class="fopenlink" href="S1/Linux1_Clase1_CTT.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Permisos_y_Usuarios_Linux1.pptx</span><a class="fopenlink" href="S1/Permisos_y_Usuarios_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Caracteres_Especiales_y_Variables_Linux1.pptx</span><a class="fopenlink" href="S1/Caracteres_Especiales_y_Variables_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Operadores_Variables_y_Bucles_Linux1.pptx</span><a class="fopenlink" href="S1/Operadores_Variables_y_Bucles_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Bash_Scripting_Linux1.pptx</span><a class="fopenlink" href="S1/Bash_Scripting_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Quiz_Comandos_Linux1.pptx</span><a class="fopenlink" href="S1/Quiz_Comandos_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
     </div>
 
+    <div class="subhead">Guía teórico-práctica</div>
     <div class="fcard">
-      <div class="ficon pptx">PPTX</div>
+      <div class="ficon docx">DOCX</div>
       <div class="finfo">
-        <div class="fname">Quiz_Comandos_Linux1.pptx</div>
-        <div class="fdesc">Quiz interactivo en diapositivas para repasar en clase: pregunta, opciones y respuesta revelada con explicación, comando por comando.</div>
-        <div class="fmeta"><span class="badge slides">27 diapositivas</span><span>12 preguntas</span></div>
+        <div class="fname">S1_CTT_IntroLinux_Guia_Teorico_Practica.docx</div>
+        <div class="fdesc">Programa completo de las 3 unidades, con marco teórico, tablas de comandos, ejercicios diferenciados por Perfil A/B, laboratorios y criterios de evaluación.</div>
+        <div class="fmeta"><span class="badge guia">guía docente</span></div>
       </div>
-      <a class="fopen" href="Quiz_Comandos_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a>
+      <a class="fopen" href="S1/S1_CTT_IntroLinux_Guia_Teorico_Practica.docx" target="_blank" rel="noopener">Abrir ↗</a>
     </div>
-  </div>
 
-  <div class="section">
-    <div class="sechead"><h2>Administración de Sistemas Operativos III</h2><span class="path">/aso3-escrito1</span></div>
-
+    <div class="subhead">Práctica autodiagnóstica</div>
     <div class="fcard">
       <div class="ficon html">WEB</div>
       <div class="finfo">
-        <div class="fname">Escrito1_Linux_Evaluacion.html</div>
-        <div class="fdesc">Evaluación web con corrección al instante, basada en el Escrito 1 de ASO III más repaso de comandos de Linux 1. Resultado compartible al final.</div>
-        <div class="fmeta"><span class="badge eval">evaluación</span><span>21 preguntas</span></div>
+        <div class="fname">Practica_S1_Comandos_BashScripting.html</div>
+        <div class="fdesc">Repaso interactivo con corrección al instante, organizado en 5 módulos: comandos Linux, comandos con modificadores, bash scripting, operadores/variables/bucles, y procesos y trabajos. Incluye modalidad de escribir el comando y sistema de marcar preguntas para repasar después.</div>
+        <div class="fmeta"><span class="badge practica">práctica</span><span>5 módulos</span></div>
       </div>
-      <a class="fopen" href="Escrito1_Linux_Evaluacion.html" target="_blank" rel="noopener">Abrir ↗</a>
+      <a class="fopen" href="S1/Practica_S1_Comandos_BashScripting.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">Evaluación formal</div>
+    <div class="fcard soon">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Evaluación formal — Linux I</div>
+        <div class="fdesc">Pide Nombre, Apellido y C.I., penaliza las respuestas incorrectas, permite navegar libremente y entrega un resumen final. Aún no construida.</div>
+        <div class="fmeta"><span class="badge soon">próximamente</span></div>
+      </div>
+      <a class="fopen disabled" href="#" tabindex="-1">Abrir ↗</a>
     </div>
   </div>
 
-  <div class="section">
-    <div class="sechead"><h2>Linux III — Redes y Servicios POSIX (U1 · systemd)</h2><span class="path">/linux3-systemd-u1</span></div>
+  <!-- ============ S2 ============ -->
+  <div class="modsection">
+    <div class="modhead"><h2>Linux II — Redes POSIX SHSCRIPT</h2><span class="path">/S2</span></div>
+    <div class="moddesc">Comandos avanzados y administración POSIX, SSH y administración remota, y shell scripting y automatización con cron. 3 unidades · 16 semanas.</div>
 
+    <div class="subhead">Diapositivas <span class="n">· 2</span></div>
+    <div class="flist">
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Linux2_Clase0_Nexo_CTT.pptx</span><a class="fopenlink" href="S2/Linux2_Clase0_Nexo_CTT.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Comillas_Salida_y_Pruebas_Linux1.pptx</span><a class="fopenlink" href="S2/Comillas_Salida_y_Pruebas_Linux1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+    </div>
+
+    <div class="subhead">Guía y clase</div>
+    <div class="fcard">
+      <div class="ficon docx">DOCX</div>
+      <div class="finfo">
+        <div class="fname">S2_CTT_RedesPOSIX_SHSCRIPT_Guia_Teorico_Practica.docx</div>
+        <div class="fdesc">Programa completo de las 3 unidades: comandos avanzados, SSH remoto y shell scripting/automatización, con ejercicios Perfil A/B y criterios de evaluación.</div>
+        <div class="fmeta"><span class="badge guia">guía docente</span></div>
+      </div>
+      <a class="fopen" href="S2/S2_CTT_RedesPOSIX_SHSCRIPT_Guia_Teorico_Practica.docx" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+    <div class="fcard">
+      <div class="ficon docx">DOCX</div>
+      <div class="finfo">
+        <div class="fname">Linux2_Clase1_Redes POSIX Bash Scripting.docx</div>
+        <div class="fdesc">Documento técnico de la clase 1: los tres flujos estándar, redirecciones, pipes y una introducción a systemctl/journalctl.</div>
+        <div class="fmeta"><span class="badge guia">material de clase</span></div>
+      </div>
+      <a class="fopen" href="S2/Linux2_Clase1_%20Redes%20%20POSIX%20Bash%20Scripting.docx" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">Contenido teórico complementario <span class="n">· 3</span></div>
+    <div class="fcard">
+      <div class="ficon md">MD</div>
+      <div class="finfo">
+        <div class="fname">U1_Complemento_Filtros_Procesos.md</div>
+        <div class="fdesc">Completa la U1: cut/sort/uniq, find+xargs, regex ERE, gestión de procesos, lsof y diagnóstico de red básico.</div>
+        <div class="fmeta"><span class="badge lab">apunte</span></div>
+      </div>
+      <a class="fopen" href="S2/U1_Complemento_Filtros_Procesos.md" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+    <div class="fcard">
+      <div class="ficon md">MD</div>
+      <div class="finfo">
+        <div class="fname">U2_SSH_Administracion_Remota.md</div>
+        <div class="fdesc">Clase completa de U2: criptografía asimétrica, ssh-keygen/ssh-copy-id, scp/sftp, hardening de sshd_config, túneles, ProxyJump y fail2ban.</div>
+        <div class="fmeta"><span class="badge lab">apunte</span></div>
+      </div>
+      <a class="fopen" href="S2/U2_SSH_Administracion_Remota.md" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+    <div class="fcard">
+      <div class="ficon md">MD</div>
+      <div class="finfo">
+        <div class="fname">U3_ShellScripting_Automatizacion.md</div>
+        <div class="fdesc">Clase completa de U3: estructura profesional de scripts, funciones, manejo de errores/trap, logging, crontab y shellcheck.</div>
+        <div class="fmeta"><span class="badge lab">apunte</span></div>
+      </div>
+      <a class="fopen" href="S2/U3_ShellScripting_Automatizacion.md" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">Práctica autodiagnóstica</div>
     <div class="fcard">
       <div class="ficon html">WEB</div>
       <div class="finfo">
-        <div class="fname">Evaluacion_Linux3_U1_100preguntas.html</div>
-        <div class="fdesc">Modo práctica sobre las Clases 1–3 y Laboratorios 1–3 de systemd: PID 1, units, Restart=, timers, cgroups, Type=, journald y diagnóstico. Elegís qué bloques rendir.</div>
-        <div class="fmeta"><span class="badge practica">práctica</span><span>100 preguntas</span></div>
+        <div class="fname">Practica_S2_RedesPOSIX_SSH_Scripting.html</div>
+        <div class="fdesc">Repaso interactivo con corrección al instante, con selector de unidad (U1/U2/U3). Mezcla preguntas de opción múltiple y de escribir el comando.</div>
+        <div class="fmeta"><span class="badge practica">práctica</span><span>63 preguntas</span><span>3 unidades</span></div>
       </div>
-      <a class="fopen" href="Evaluacion_Linux3_U1_100preguntas.html" target="_blank" rel="noopener">Abrir ↗</a>
+      <a class="fopen" href="S2/Practica_S2_RedesPOSIX_SSH_Scripting.html" target="_blank" rel="noopener">Abrir ↗</a>
     </div>
 
+    <div class="subhead">Evaluación formal</div>
+    <div class="fcard">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Evaluacion_Formal_S2_RedesPOSIX.html</div>
+        <div class="fdesc">Pide Nombre, Apellido y C.I., permite elegir qué unidades rendir, penaliza las respuestas incorrectas, navegación libre y resumen final compartible.</div>
+        <div class="fmeta"><span class="badge formal">evaluación formal</span><span>99 preguntas</span><span>3 unidades</span></div>
+      </div>
+      <a class="fopen" href="S2/Evaluacion_Formal_S2_RedesPOSIX.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+  </div>
+
+  <!-- ============ S3 ============ -->
+  <div class="modsection">
+    <div class="modhead"><h2>Linux III — Redes POSIX Servicios</h2><span class="path">/S3</span></div>
+    <div class="moddesc">Gestión de servicios con systemd, servicios de red (Apache, Samba, firewall) y contenedores con Docker. 3 unidades · 16 semanas.</div>
+
+    <div class="subhead">Diapositivas <span class="n">· 3</span></div>
+    <div class="flist">
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Linux3_Clase1_Servicios_systemd_v2.pptx</span><a class="fopenlink" href="S3/Linux3_Clase1_Servicios_systemd_v2.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Linux3_Clase2_Units_Avanzadas_Timers_Hardening.pptx</span><a class="fopenlink" href="S3/Linux3_Clase2_Units_Avanzadas_Timers_Hardening.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+      <div class="fitem"><span class="fico">PPTX</span><span class="fname">Linux3_Clase3_Journald_Diagnostico_CierreU1.pptx</span><a class="fopenlink" href="S3/Linux3_Clase3_Journald_Diagnostico_CierreU1.pptx" target="_blank" rel="noopener">Abrir ↗</a></div>
+    </div>
+
+    <div class="subhead">Guía teórico-práctica</div>
+    <div class="fcard">
+      <div class="ficon docx">DOCX</div>
+      <div class="finfo">
+        <div class="fname">S3_CTT_RedesPOSIX_Servicios_Docker_Guia_Teorico_Practica.docx</div>
+        <div class="fdesc">Programa completo de las 3 unidades: systemd, servicios de red y Docker, con ejercicios Perfil A/B y criterios de evaluación.</div>
+        <div class="fmeta"><span class="badge guia">guía docente</span></div>
+      </div>
+      <a class="fopen" href="S3/S3_CTT_RedesPOSIX_Servicios_Docker_Guia_Teorico_Practica.docx" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">Laboratorios — U1 systemd <span class="n">· 3</span></div>
+    <div class="fcard">
+      <div class="ficon md">MD</div>
+      <div class="finfo">
+        <div class="fname">LAB01_Exploracion_systemd.md</div>
+        <div class="fdesc">PID 1, systemctl list-units, systemctl status, systemctl cat y journalctl básico. 40–50 min.</div>
+        <div class="fmeta"><span class="badge lab">lab 1</span></div>
+      </div>
+      <a class="fopen" href="S3/LAB01_Exploracion_systemd.md" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+    <div class="fcard">
+      <div class="ficon md">MD</div>
+      <div class="finfo">
+        <div class="fname">LAB02_Unit_Fallos_Hardening.md</div>
+        <div class="fdesc">Crear una unit file propia, simular fallos, timer companion y hardening básico con security score. 50–60 min.</div>
+        <div class="fmeta"><span class="badge lab">lab 2</span></div>
+      </div>
+      <a class="fopen" href="S3/LAB02_Unit_Fallos_Hardening.md" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+    <div class="fcard">
+      <div class="ficon md">MD</div>
+      <div class="finfo">
+        <div class="fname">LAB03_Practica_Integradora_U1.md</div>
+        <div class="fdesc">Ecosistema completo de servicios CTT, diagnóstico en 5 pasos y journald persistente. 60 min.</div>
+        <div class="fmeta"><span class="badge lab">lab 3</span></div>
+      </div>
+      <a class="fopen" href="S3/LAB03_Practica_Integradora_U1.md" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">Práctica autodiagnóstica — U1</div>
+    <div class="fcard soon">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Práctica autodiagnóstica — U1 systemd</div>
+        <div class="fdesc">Versión sin datos personales y reintentable de la evaluación de U1, para repasar antes del escrito. Aún no construida.</div>
+        <div class="fmeta"><span class="badge soon">próximamente</span></div>
+      </div>
+      <a class="fopen disabled" href="#" tabindex="-1">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">Evaluación formal — U1</div>
     <div class="fcard">
       <div class="ficon html">WEB</div>
       <div class="finfo">
         <div class="fname">Evaluacion_Formal_Linux3_U1.html</div>
-        <div class="fdesc">Versión formal del mismo contenido: pide Nombre, Apellido y C.I., penaliza las respuestas incorrectas, permite navegar libremente y entrega un resumen final.</div>
-        <div class="fmeta"><span class="badge formal">evaluación formal</span><span>100 preguntas</span></div>
+        <div class="fdesc">Cubre Clases 1–3 y Laboratorios 1–3 de systemd: PID 1, units, Restart=, timers, cgroups, Type=, journald y diagnóstico. Pide Nombre/C.I., penaliza errores y entrega un resumen final.</div>
+        <div class="fmeta"><span class="badge formal">evaluación formal</span><span>100 preguntas</span><span>U1</span></div>
       </div>
-      <a class="fopen" href="Evaluacion_Formal_Linux3_U1.html" target="_blank" rel="noopener">Abrir ↗</a>
+      <a class="fopen" href="S3/Evaluacion_Formal_Linux3_U1%20%281%29.html" target="_blank" rel="noopener">Abrir ↗</a>
+    </div>
+
+    <div class="subhead">U2 (servicios de red) y U3 (Docker)</div>
+    <div class="fcard soon">
+      <div class="ficon html">WEB</div>
+      <div class="finfo">
+        <div class="fname">Labs, práctica y evaluación formal de U2 y U3</div>
+        <div class="fdesc">Apache/Nginx con virtual hosts, Samba, UFW/firewalld (U2) y Docker, Dockerfile, docker-compose (U3). La guía docente ya cubre la teoría completa; falta el material interactivo.</div>
+        <div class="fmeta"><span class="badge soon">próximamente</span></div>
+      </div>
+      <a class="fopen disabled" href="#" tabindex="-1">Abrir ↗</a>
     </div>
   </div>
 
-  <div class="section">
-    <div class="sechead"><h2>Redes POSIX &amp; Bash Script — ESI CEPT</h2><span class="path">/redes-posix-bashscript</span></div>
-
-    <div class="fcard">
-      <div class="ficon html">WEB</div>
-      <div class="finfo">
-        <div class="fname">Practica_Redes_POSIX_BashScript.html</div>
-        <div class="fdesc">Sistema de práctica con 5 módulos: comandos Linux, comandos con modificadores, Bash scripting, operadores/variables/bucles, y procesos y trabajos. Incluye modalidad de escribir el comando y sistema de marcar preguntas para repasar después.</div>
-        <div class="fmeta"><span class="badge practica">práctica</span><span>5 módulos</span><span>175 preguntas</span></div>
-      </div>
-      <a class="fopen" href="Practica_Redes_POSIX_BashScript.html" target="_blank" rel="noopener">Abrir ↗</a>
-    </div>
+  <div class="roadmapcard">
+    <div class="rt">📋 Roadmap de contenido</div>
+    <div class="rd">El detalle completo de qué está construido y qué falta por módulo — con checkboxes para ir tildando — vive en <a href="ROADMAP.md">ROADMAP.md</a>.</div>
   </div>
 
   <footer>
-    <span class="g">exit 0</span> — los enlaces asumen que todos los archivos están en la misma carpeta que este index.html.<br>
-    Si organizás el repo en subcarpetas, ajustá los href de arriba para que coincidan con las rutas reales.
+    <span class="g">exit 0</span> — los enlaces son relativos a la carpeta de cada módulo (S1/, S2/, S3/) desde este index.html.<br>
+    Si movés o renombrás un archivo, actualizá el href correspondiente arriba.
   </footer>
 </div>
 </body>

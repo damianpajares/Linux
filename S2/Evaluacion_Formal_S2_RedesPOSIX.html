@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluación Formal · Linux II — Redes POSIX</title>
+<style>
+  :root{
+    --bg:#0D1117; --card:#161B22; --border:#30363D;
+    --txt:#E6EDF3; --mut:#8B949E;
+    --green:#3FB950; --green-soft:#7EE787; --green-bg:#12261A; --green-line:#23492F;
+    --orange:#FFA657; --blue:#A5D6FF; --red:#FF7B72; --red-bg:#2D1517; --red-line:#5C2326;
+    --mono:"JetBrains Mono","Cascadia Code",ui-monospace,"Courier New",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--txt);font-family:var(--sans);min-height:100vh;
+       display:flex;justify-content:center;padding:24px 16px 60px}
+  .wrap{width:100%;max-width:860px}
+
+  .prompt{font-family:var(--mono);font-size:14px;margin-bottom:6px;word-break:break-all}
+  .prompt .u{color:var(--green)} .prompt .p{color:var(--blue)}
+  h1{font-size:clamp(22px,4.5vw,32px);font-weight:700;margin:14px 0 4px}
+  .sub{color:var(--mut);font-size:15px;margin-bottom:22px}
+
+  .progress{font-family:var(--mono);font-size:13px;color:var(--mut);display:flex;
+            align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .bar{flex:1;min-width:120px;height:8px;background:var(--card);border:1px solid var(--border);
+       border-radius:99px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .35s ease}
+  @media (prefers-reduced-motion:reduce){ .bar>i{transition:none} .card{animation:none!important} }
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;
+        overflow:hidden;animation:up .3s ease}
+  @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .tbar{display:flex;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .tbar .lbl{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .cbody{padding:22px 22px 24px}
+
+  .badge{display:inline-block;font-family:var(--mono);font-size:12.5px;font-weight:700;
+         color:var(--green);background:var(--green-bg);border:1px solid var(--green-line);
+         border-radius:6px;padding:4px 10px;margin-bottom:6px}
+  .cat{font-size:13px;color:var(--mut);margin-left:8px}
+  .pts{float:right;font-family:var(--mono);font-size:12px;color:var(--mut);margin-top:6px}
+  .qtext{font-size:19px;font-weight:700;line-height:1.35;margin:10px 0 6px}
+  .qtext code{font-family:var(--mono);color:var(--green-soft);font-size:.88em;
+              background:var(--bg);padding:2px 6px;border-radius:5px}
+  .hint{font-size:13px;color:var(--mut);font-style:italic;margin-bottom:14px}
+
+  .opts{display:grid;gap:10px;margin-top:8px}
+  .opt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;
+       background:var(--bg);border:1px solid var(--border);border-radius:8px;
+       padding:12px 14px;color:var(--txt);font-family:var(--mono);font-size:14px;
+       transition:border-color .15s, background .15s}
+  .opt:hover{border-color:var(--mut)}
+  .opt:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .opt .let{flex:0 0 28px;height:28px;border:1.5px solid var(--orange);border-radius:50%;
+            display:grid;place-items:center;font-weight:700;font-size:12.5px;color:var(--orange)}
+  .opt.multi .let{border-radius:7px}
+  .opt.picked{background:var(--green-bg);border-color:var(--green)}
+  .opt.picked .let{background:var(--green);border-color:var(--green);color:var(--bg)}
+  .opt.picked span.txt{color:var(--green-soft);font-weight:700}
+  .mark{margin-left:auto;font-family:var(--mono);font-weight:700}
+
+  .actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;
+       border-radius:8px;padding:11px 18px;border:1px solid var(--border);
+       background:var(--card);color:var(--txt);transition:filter .15s}
+  .btn:hover{filter:brightness(1.2)}
+  .btn:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .btn.primary{background:var(--green-bg);border-color:var(--green);color:var(--green-soft)}
+  .btn.finish{background:var(--red-bg);border-color:var(--red-line);color:var(--red)}
+  .btn.finish.primary{background:var(--green-bg);border-color:var(--green);color:var(--green-soft)}
+  .btn:disabled{opacity:.35;cursor:default;filter:none}
+  .btn.ghost{background:transparent}
+  .spacer{flex:1 1 auto}
+
+  /* ---- start / student form ---- */
+  .startcard .cbody{padding:26px 24px 28px}
+  .formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+  @media (max-width:520px){.formgrid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field.full{grid-column:1/-1}
+  .field label{font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .field input{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+               padding:11px 12px;color:var(--txt);font-family:var(--sans);font-size:15px}
+  .field input:focus{outline:2px solid var(--green);outline-offset:1px;border-color:var(--green)}
+  .field input.err{border-color:var(--red)}
+  .sectionlbl{font-family:var(--mono);font-size:12.5px;color:var(--mut);margin:2px 0 10px;
+              text-transform:uppercase;letter-spacing:.04em}
+
+  .part-row{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--bg);
+            border:1px solid var(--border);border-radius:8px;margin-bottom:10px;cursor:pointer}
+  .part-row input{width:18px;height:18px;accent-color:var(--green);flex:0 0 auto}
+  .part-row .pi{flex:1}
+  .part-row .pt{font-weight:700;font-size:15px}
+  .part-row .pd{color:var(--mut);font-size:13px;margin-top:2px}
+  .part-row .pc{font-family:var(--mono);color:var(--green-soft);font-size:13px;flex:0 0 auto}
+  .startfoot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;
+             font-family:var(--mono);font-size:13px;color:var(--mut);flex-wrap:wrap;gap:10px}
+  .warn{font-size:12.5px;color:var(--orange);margin-top:8px;display:none}
+  .warn.show{display:block}
+
+  /* ---- navegador de preguntas ---- */
+  .navtoggle{width:100%;text-align:left;background:var(--card);border:1px solid var(--border);
+             border-radius:8px;padding:10px 14px;color:var(--mut);font-family:var(--mono);
+             font-size:13px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .navtoggle:hover{border-color:var(--mut)}
+  .navtoggle .car{margin-left:auto;transition:transform .15s}
+  .navtoggle.open .car{transform:rotate(180deg)}
+  .navgrid{display:none;grid-template-columns:repeat(10,1fr);gap:6px;margin:-6px 0 14px;
+           background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px}
+  .navgrid.open{display:grid}
+  @media (max-width:520px){.navgrid{grid-template-columns:repeat(8,1fr)}}
+  .navcell{aspect-ratio:1;border:1px solid var(--border);border-radius:5px;background:var(--bg);
+           color:var(--mut);font-family:var(--mono);font-size:11px;cursor:pointer;
+           display:grid;place-items:center;transition:border-color .1s}
+  .navcell:hover{border-color:var(--mut)}
+  .navcell.answered{background:var(--green-bg);border-color:var(--green-line);color:var(--green-soft)}
+  .navcell.current{border-color:var(--orange);border-width:2px;color:var(--orange);font-weight:700}
+
+  /* ---- resultado / resumen ---- */
+  .result{display:none}
+  .result.show{display:block}
+  .rout{font-family:var(--sans);font-size:14px;line-height:1.6;padding:22px}
+  .rhead{font-family:var(--mono);font-size:13px;color:var(--mut);margin-bottom:14px}
+  .rhead b{color:var(--txt)}
+  .score-big{font-family:var(--mono);font-size:clamp(36px,7vw,52px);font-weight:700;color:var(--green);margin:6px 0}
+  .score-big .of{font-size:.42em;color:var(--mut);font-weight:400}
+  .msg{font-size:16px;margin:6px 0 16px;color:var(--txt)}
+  .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  @media (max-width:560px){.statrow{grid-template-columns:1fr 1fr}}
+  .stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .stat .t{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+  .stat .v{font-family:var(--mono);font-size:20px;font-weight:700;margin-top:4px}
+  .stat.ok .v{color:var(--green-soft)} .stat.no .v{color:var(--red)} .stat.blank .v{color:var(--mut)}
+  .penalty{font-family:var(--mono);font-size:13px;color:var(--red);margin-bottom:16px}
+
+  .parts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 18px}
+  @media (max-width:560px){.parts{grid-template-columns:1fr}}
+  .part{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+  .part .t{font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .part .v{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green-soft);margin-top:4px}
+  .part .b{font-family:var(--mono);font-size:11.5px;color:var(--mut);margin-top:2px}
+
+  .revtitle{font-family:var(--mono);font-size:13px;color:var(--mut);margin:18px 0 10px;
+            text-transform:uppercase;letter-spacing:.04em}
+  .revwrap{max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:8px}
+  .revgroup .revgrouphead{font-family:var(--mono);font-size:12px;color:var(--mut);
+            background:var(--bg);padding:8px 14px;position:sticky;top:0}
+  .revrow{display:flex;gap:10px;align-items:flex-start;padding:9px 14px;border-top:1px solid var(--border);
+          font-size:13px}
+  .revrow .rn{font-family:var(--mono);color:var(--mut);flex:0 0 26px}
+  .revrow .rq{flex:1;min-width:0}
+  .revrow .rq .rqtext{color:var(--txt)}
+  .revrow .rq .rya{font-family:var(--mono);font-size:12px;margin-top:3px}
+  .revrow .mkok{color:var(--green)} .revrow .mkno{color:var(--red)}
+
+  .copied{font-family:var(--mono);font-size:13px;color:var(--green);opacity:0;transition:opacity .2s}
+  .copied.on{opacity:1}
+
+  footer{margin-top:26px;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  footer .g{color:var(--green)}
+
+  @media print{
+    body{background:#fff;color:#111;padding:0}
+    .prompt,.progress,.navtoggle,.navgrid,footer,.actions{display:none!important}
+    .card{border:1px solid #ccc;background:#fff;animation:none}
+    .tbar{display:none}
+    .qtext code, .feed code, .rq code{background:#f0f0f0;color:#111}
+    .score-big{color:#111}
+    .revwrap{max-height:none;overflow:visible}
+    .stat .v, .part .v{color:#111}
+    .revrow .mkok{color:#0a7a2f} .revrow .mkno{color:#b3261e}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="prompt"><span class="u">ariel@linux2</span>:<span class="p">~</span>$ ./eval_formal_s2.sh --iniciar</div>
+  <h1>Evaluación Formal · Linux II — Redes POSIX</h1>
+  <div class="sub">Comandos avanzados y administración POSIX, SSH y administración remota, y Shell Scripting y automatización — U1, U2 y U3 completas. Las respuestas incorrectas descuentan puntos: respondé solo si estás seguro.</div>
+
+  <!-- START SCREEN -->
+  <div class="card startcard" id="startcard">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">config.sh</span>
+    </div>
+    <div class="cbody" id="startbody"></div>
+  </div>
+
+  <div class="progress" id="progress" style="display:none">
+    <span id="ptext">[ 0/0 ]</span>
+    <div class="bar"><i id="pbar"></i></div>
+    <span id="ppts" title="Respondidas">0 respondidas</span>
+  </div>
+
+  <button type="button" class="navtoggle" id="navtoggle" style="display:none">
+    <span id="navtoggletxt">Ver todas las preguntas</span><span class="car">▾</span>
+  </button>
+  <div class="navgrid" id="navgrid"></div>
+
+  <div class="card" id="qcard" style="display:none">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl" id="tlabel">pregunta.sh</span>
+    </div>
+    <div class="cbody" id="qbody"></div>
+  </div>
+
+  <div class="card result" id="rcard">
+    <div class="tbar">
+      <span class="dot" style="background:#FF5F56"></span>
+      <span class="dot" style="background:#FFBD2E"></span>
+      <span class="dot" style="background:#27C93F"></span>
+      <span class="lbl">resumen</span>
+    </div>
+    <div class="rout" id="rbody"></div>
+  </div>
+
+  <footer><span class="g">exit 0</span> — Linux II · CTT · Redes POSIX — SHSCRIPT</footer>
+</div>
+
+<script>
+"use strict";
+/* ===================== DATOS ===================== */
+/* type: "single" | "multi"; correct: index | array de índices; pts: puntos */
+const PARTS = [
+{
+  name: "Comandos Avanzados y Administración POSIX",
+  short: "U1",
+  desc: "Redirecciones, pipes, grep/awk/sed, cut/sort/uniq, find+xargs, regex ERE, procesos, systemctl/journalctl, lsof, red",
+  questions: [
+    { cat:"Redirecciones", q:"¿Qué diferencia hay entre <code>&gt;</code> y <code>&gt;&gt;</code>?", type:"single", pts:1,
+      opts:["<code>&gt;</code> sobrescribe el archivo; <code>&gt;&gt;</code> agrega al final","Son exactamente lo mismo","<code>&gt;</code> agrega al final; <code>&gt;&gt;</code> sobrescribe","<code>&gt;&gt;</code> solo funciona con stderr"], correct:0,
+      exp:"<code>&gt;</code> crea el archivo o borra su contenido previo; <code>&gt;&gt;</code> agrega al final sin borrar lo existente." },
+    { cat:"Redirecciones", q:"¿Qué hace <code>comando 2&gt;&amp;1</code> al final de <code>comando &gt; out.log 2&gt;&amp;1</code>?", type:"single", pts:1,
+      opts:["Redirige stderr al mismo destino donde ya apunta stdout","Redirige stdout a stderr","Descarta stderr","Combina stdin con stdout"], correct:0,
+      exp:"<code>2&gt;&amp;1</code> hace que el descriptor 2 (stderr) apunte a donde ya apunta el descriptor 1 (stdout) en ese momento — por eso el orden importa: debe ir después de la redirección de stdout." },
+    { cat:"Redirecciones", q:"¿Qué es <code>/dev/null</code>?", type:"single", pts:1,
+      opts:["Un dispositivo virtual que descarta todo lo que se le envía","Un archivo de log del sistema","El directorio raíz de dispositivos","Un enlace simbólico a /tmp"], correct:0,
+      exp:"<code>/dev/null</code> es el 'agujero negro' de Linux: todo lo que se le redirige desaparece inmediatamente. Se usa para silenciar salidas no deseadas." },
+    { cat:"Redirecciones", q:"¿Qué hace <code>comando &amp;&gt; todo.log</code>?", type:"single", pts:1,
+      opts:["Redirige stdout y stderr juntos al mismo archivo","Solo redirige stdout","Solo redirige stderr","Ejecuta el comando en background"], correct:0,
+      exp:"<code>&amp;&gt;</code> es un atajo de Bash para redirigir stdout y stderr al mismo archivo en un solo operador." },
+    { cat:"Redirecciones", q:"¿Qué descriptor de archivo corresponde a stderr?", type:"single", pts:1,
+      opts:["2","0","1","3"], correct:0,
+      exp:"Los tres descriptores estándar son: 0 = stdin, 1 = stdout, 2 = stderr." },
+    { cat:"Pipes", q:"¿Qué hace el operador <code>|</code>?", type:"single", pts:1,
+      opts:["Conecta el stdout del comando de la izquierda con el stdin del comando de la derecha","Ejecuta ambos comandos en paralelo sin relación","Concatena dos archivos","Redirige stderr a stdout"], correct:0,
+      exp:"El pipe conecta directamente la salida estándar de un comando con la entrada estándar del siguiente, sin archivos temporales de por medio." },
+    { cat:"Pipes", q:"¿Qué produce la cadena <code>grep 'ERROR' log.txt | sort | uniq -c | sort -rn</code>?", type:"single", pts:1,
+      opts:["Las líneas con 'ERROR', contadas por repetición y ordenadas de más a menos frecuente","Solo las líneas únicas con 'ERROR', sin contar","Las líneas ordenadas alfabéticamente sin contar duplicados","Un error de sintaxis, no se pueden encadenar 4 comandos"], correct:0,
+      exp:"El patrón filtra con grep, ordena para agrupar duplicados, cuenta con <code>uniq -c</code>, y reordena por frecuencia descendente con <code>sort -rn</code>." },
+    { cat:"Pipes", q:"¿Por qué <code>uniq</code> necesita que la entrada esté ordenada con <code>sort</code> antes?", type:"single", pts:1,
+      opts:["Porque uniq solo detecta duplicados en líneas adyacentes","Porque uniq no puede procesar archivos sin ordenar","Porque sort es más rápido que uniq","No es necesario, es solo una convención"], correct:0,
+      exp:"<code>uniq</code> compara únicamente líneas consecutivas. Si los duplicados no están agrupados, no los detecta — por eso siempre va después de <code>sort</code>." },
+    { cat:"grep/awk/sed", q:"¿Qué habilita la opción <code>-E</code> en <code>grep -E</code>?", type:"single", pts:1,
+      opts:["Expresiones regulares extendidas (ERE), sin necesidad de escapar metacaracteres","Búsqueda recursiva","Ignorar mayúsculas/minúsculas","Mostrar el número de línea"], correct:0,
+      exp:"<code>-E</code> activa ERE (Extended Regular Expressions), permitiendo usar <code>+</code>, <code>?</code>, <code>|</code>, <code>{}</code> sin escaparlos con <code>\\</code>." },
+    { cat:"grep/awk/sed", q:"¿Qué hace <code>awk -F: '$3&gt;=1000 {print $1}' /etc/passwd</code>?", type:"single", pts:1,
+      opts:["Imprime el nombre de los usuarios con UID mayor o igual a 1000","Imprime todos los UID del sistema","Cuenta cuántos usuarios hay","Reemplaza el UID por 1000"], correct:0,
+      exp:"<code>-F:</code> usa ':' como delimitador de campos; <code>$3</code> es el UID; la condición filtra usuarios reales (UID &gt;= 1000) y <code>{print $1}</code> imprime el nombre de usuario (campo 1)." },
+    { cat:"grep/awk/sed", q:"¿Qué hace <code>sed 's/http:/https:/g' -i config.conf</code>?", type:"single", pts:1,
+      opts:["Reemplaza todas las ocurrencias de 'http:' por 'https:' directamente en el archivo","Muestra el reemplazo por pantalla sin modificar el archivo","Elimina todas las líneas que contienen 'http:'","Cuenta cuántas veces aparece 'http:'"], correct:0,
+      exp:"<code>s/patrón/reemplazo/g</code> sustituye todas las ocurrencias (flag <code>g</code> = global); <code>-i</code> aplica el cambio directamente sobre el archivo (in-place)." },
+    { cat:"grep/awk/sed", q:"En <code>awk</code>, ¿qué representa la variable <code>NF</code>?", type:"single", pts:1,
+      opts:["La cantidad de campos (columnas) de la línea actual","El número de la línea actual","El nombre del archivo procesado","El separador de campos"], correct:0,
+      exp:"<code>NF</code> (Number of Fields) contiene la cantidad de campos de la línea que se está procesando; <code>NR</code> es el número de línea (Number of Record)." },
+    { cat:"grep/awk/sed", q:"¿Qué extrae <code>cut -d: -f1 /etc/passwd</code>?", type:"single", pts:1,
+      opts:["El primer campo de cada línea, usando ':' como delimitador","Los primeros 1 caracteres de cada línea","Todas las líneas que empiezan con ':'","El último campo de cada línea"], correct:0,
+      exp:"<code>-d:</code> define ':' como delimitador y <code>-f1</code> selecciona el campo 1, que en <code>/etc/passwd</code> es el nombre de usuario." },
+    { cat:"grep/awk/sed", q:"¿Cuáles de las siguientes son metacaracteres válidos en una ERE (<code>grep -E</code>)?", type:"multi", pts:2,
+      opts:["<code>+</code>","<code>?</code>","<code>|</code>","<code>%</code>","<code>{n,m}</code>","<code>#</code>"], correct:[0,1,2,4],
+      exp:"<code>+</code> (1 o más), <code>?</code> (0 o 1), <code>|</code> (alternancia) y <code>{n,m}</code> (repetición acotada) son metacaracteres ERE. <code>%</code> y <code>#</code> no tienen significado especial en regex." },
+    { cat:"cut/sort/uniq", q:"¿Qué diferencia hay entre <code>sort</code> y <code>sort -n</code>?", type:"single", pts:1,
+      opts:["<code>sort</code> ordena alfabéticamente (ASCII); <code>sort -n</code> ordena numéricamente","Son exactamente lo mismo","<code>sort -n</code> ordena de forma inversa","<code>sort</code> requiere que el archivo esté ya ordenado"], correct:0,
+      exp:"Sin <code>-n</code>, <code>sort</code> compara los valores como texto (por lo que '10' queda antes que '2'); con <code>-n</code> los compara numéricamente." },
+    { cat:"cut/sort/uniq", q:"¿Qué hace <code>uniq -c</code>?", type:"single", pts:1,
+      opts:["Cuenta cuántas veces se repite cada línea consecutiva","Elimina todas las líneas duplicadas sin contar","Ordena las líneas alfabéticamente","Combina líneas adyacentes en una sola"], correct:0,
+      exp:"<code>uniq -c</code> antepone a cada línea el número de veces que aparece consecutivamente, siempre que la entrada ya esté ordenada." },
+    { cat:"cut/sort/uniq", q:"¿Qué ordena <code>sort -k2 -n archivo.txt</code>?", type:"single", pts:1,
+      opts:["Por la columna 2, numéricamente","Por la columna 1, alfabéticamente","Por las últimas 2 líneas del archivo","No es una sintaxis válida"], correct:0,
+      exp:"<code>-k2</code> indica que se ordena usando el campo (columna) 2 como clave, y <code>-n</code> hace que la comparación sea numérica en vez de alfabética." },
+    { cat:"find+xargs", q:"¿Qué busca <code>find /tmp -mtime +7</code>?", type:"single", pts:1,
+      opts:["Archivos modificados hace más de 7 días","Archivos de más de 7 MB","Archivos creados en los últimos 7 días","Directorios con más de 7 archivos"], correct:0,
+      exp:"<code>-mtime +7</code> filtra por tiempo de modificación: archivos cuya última modificación fue hace más de 7 días." },
+    { cat:"find+xargs", q:"¿Cuál es la principal ventaja de <code>find ... | xargs comando</code> sobre <code>find ... -exec comando {} \\;</code>?", type:"single", pts:1,
+      opts:["xargs agrupa varios resultados en menos invocaciones del comando, siendo más eficiente con muchos archivos","-exec no puede recibir más de un archivo","xargs es la única forma de usar find con grep","No hay ninguna diferencia real"], correct:0,
+      exp:"<code>-exec ... \\;</code> lanza un proceso nuevo por cada resultado; <code>xargs</code> agrupa varios nombres en una sola invocación, lo que es mucho más rápido con muchos archivos." },
+    { cat:"find+xargs", q:"¿Qué logra <code>xargs -P 4</code>?", type:"single", pts:1,
+      opts:["Procesa los resultados en paralelo usando 4 workers","Limita la salida a 4 líneas","Repite el comando 4 veces","Ordena los resultados en 4 columnas"], correct:0,
+      exp:"<code>-P</code> define el grado de paralelismo: cuántos procesos simultáneos lanza xargs para procesar los resultados." },
+    { cat:"find+xargs", q:"¿Qué filtra <code>find /home -name '*.sh' -perm /u+x</code>?", type:"single", pts:1,
+      opts:["Archivos .sh que tienen permiso de ejecución para el dueño","Archivos .sh sin ningún permiso","Todos los archivos de /home sin importar la extensión","Directorios llamados *.sh"], correct:0,
+      exp:"<code>-perm /u+x</code> filtra archivos que tienen el bit de ejecución activo para el usuario (dueño), combinado con el filtro de nombre <code>-name '*.sh'</code>." },
+    { cat:"find+xargs", q:"¿Cuáles de las siguientes son opciones válidas de <code>find</code>?", type:"multi", pts:2,
+      opts:["<code>-name</code>","<code>-mtime</code>","<code>-size</code>","<code>-F</code>","<code>-type</code>","<code>-g</code>"], correct:[0,1,2,4],
+      exp:"<code>-name</code>, <code>-mtime</code>, <code>-size</code> y <code>-type</code> son opciones reales de find. <code>-F</code> es de awk (delimitador) y <code>-g</code> no existe como opción de find." },
+    { cat:"Procesos", q:"¿Qué diferencia hay entre <code>kill</code> (sin flags) y <code>kill -9</code>?", type:"single", pts:1,
+      opts:["<code>kill</code> envía SIGTERM (pedido educado); <code>kill -9</code> envía SIGKILL (terminación forzada sin limpieza)","Son exactamente lo mismo","<code>kill -9</code> es más lento pero más seguro","<code>kill</code> solo funciona con procesos propios; <code>kill -9</code> con cualquiera"], correct:0,
+      exp:"<code>kill</code> por defecto envía SIGTERM (15), que el proceso puede capturar y salir limpiamente; <code>kill -9</code> envía SIGKILL, que lo mata de inmediato sin darle chance de liberar recursos." },
+    { cat:"Procesos", q:"¿Qué muestra el comando <code>jobs</code>?", type:"single", pts:1,
+      opts:["Los jobs en segundo plano de la sesión actual de la terminal","Todos los procesos del sistema","Los servicios activos gestionados por systemd","El historial de comandos ejecutados"], correct:0,
+      exp:"<code>jobs</code> lista los procesos lanzados en background (con <code>&amp;</code>) o pausados (Ctrl+Z) dentro de la sesión de shell actual." },
+    { cat:"Procesos", q:"¿Qué hace <code>fg %1</code>?", type:"single", pts:1,
+      opts:["Trae el job número 1 al primer plano","Finaliza el job número 1","Envía el job 1 al segundo plano","Lista el estado del job 1"], correct:0,
+      exp:"<code>fg %N</code> retoma el job identificado con ese número y lo trae al primer plano, devolviendo el control de la terminal a ese proceso." },
+    { cat:"Procesos", q:"¿Para qué sirve <code>nohup</code>?", type:"single", pts:1,
+      opts:["Para que un proceso en background sobreviva al cierre de la sesión que lo lanzó","Para aumentar la prioridad de un proceso","Para matar un proceso de forma forzada","Para ver los procesos que más CPU consumen"], correct:0,
+      exp:"<code>nohup comando &amp;</code> ignora la señal SIGHUP que normalmente recibe un proceso cuando se cierra la terminal que lo lanzó, permitiéndole seguir corriendo." },
+    { cat:"Procesos", q:"¿Cuáles de los siguientes son estados válidos de un proceso en Linux?", type:"multi", pts:2,
+      opts:["R (running)","S (sleeping)","Z (zombie)","Q (queued)","T (stopped)","X (executing)"], correct:[0,1,2,4],
+      exp:"Los estados estándar de <code>ps</code> son R (ejecutando), S (durmiendo), D (I/O), T (detenido) y Z (zombie). 'Q' y 'X' no son estados válidos de proceso en Linux." },
+    { cat:"Procesos", q:"¿Qué muestra <code>ps aux --sort=-%cpu</code>?", type:"single", pts:1,
+      opts:["Todos los procesos, ordenados de mayor a menor uso de CPU","Solo los procesos del usuario actual","Los procesos ordenados por PID","Solo los procesos que usan más de 50% de CPU"], correct:0,
+      exp:"El signo <code>-</code> antes de <code>%cpu</code> indica orden descendente: los procesos que más CPU consumen aparecen primero." },
+    { cat:"systemctl/journalctl/red", q:"¿Qué hace <code>journalctl -u ssh -f</code>?", type:"single", pts:1,
+      opts:["Muestra los logs del servicio ssh en tiempo real (modo follow)","Reinicia el servicio ssh","Muestra solo los errores de ssh","Filtra logs de ssh de la última hora"], correct:0,
+      exp:"<code>-u ssh</code> filtra por el servicio, y <code>-f</code> (follow) mantiene la salida actualizada en vivo, similar a <code>tail -f</code>." },
+    { cat:"systemctl/journalctl/red", q:"¿Qué muestra <code>lsof -i :80</code>?", type:"single", pts:1,
+      opts:["Qué proceso está escuchando o usando el puerto 80","Los archivos abiertos en el directorio /var/www","La configuración del firewall para el puerto 80","El tráfico de red en tiempo real por el puerto 80"], correct:0,
+      exp:"<code>lsof -i :puerto</code> lista los procesos que tienen abierta una conexión o socket en ese puerto — clave para diagnosticar puertos ocupados." },
+    { cat:"systemctl/journalctl/red", q:"¿Qué muestra <code>ss -tulnp</code>?", type:"single", pts:1,
+      opts:["Los puertos TCP/UDP en escucha, junto con el proceso dueño","Solo las conexiones TCP activas y establecidas","La tabla de rutas del sistema","El uso de ancho de banda por proceso"], correct:0,
+      exp:"<code>ss -tulnp</code> (TCP, UDP, listening, numeric, process) es el reemplazo moderno de <code>netstat</code> para ver qué puertos están en escucha y qué proceso los usa." },
+    { cat:"systemctl/journalctl/red", q:"¿Qué diferencia hay entre <code>systemctl restart</code> y <code>systemctl reload</code>?", type:"single", pts:1,
+      opts:["restart detiene e inicia el servicio (corta conexiones); reload recarga la configuración sin interrumpir conexiones activas","Son exactamente lo mismo","reload es más lento que restart","restart solo aplica a servicios web"], correct:0,
+      exp:"<code>restart</code> mata y vuelve a lanzar el proceso, cortando cualquier conexión activa; <code>reload</code> le pide al proceso que relea su configuración sin interrumpir el servicio (si el servicio lo soporta)." }
+  ]
+},
+{
+  name: "SSH y Administración Remota",
+  short: "U2",
+  desc: "Criptografía asimétrica, ssh-keygen/ssh-copy-id, scp/sftp, hardening de sshd_config, port forwarding, ProxyJump, fail2ban",
+  questions: [
+    { cat:"Criptografía SSH", q:"En la autenticación SSH por clave, ¿qué se copia al servidor?", type:"single", pts:1,
+      opts:["La clave pública","La clave privada","Ambas claves","La passphrase de la clave"], correct:0,
+      exp:"Solo la clave pública se copia al servidor (a <code>~/.ssh/authorized_keys</code>). La clave privada nunca sale de la máquina del cliente." },
+    { cat:"Criptografía SSH", q:"Si un atacante intercepta todo el tráfico de una sesión SSH autenticada por clave, ¿qué obtiene?", type:"single", pts:1,
+      opts:["Nada reutilizable: la clave privada nunca viaja por la red","La clave privada del usuario","La contraseña del usuario en texto plano","Acceso permanente al servidor"], correct:0,
+      exp:"La autenticación por clave nunca transmite la clave privada ni una contraseña: el servidor verifica que el cliente pueda resolver un desafío cifrado con la clave pública, sin que el secreto viaje por la red." },
+    { cat:"Criptografía SSH", q:"¿Por qué se recomienda Ed25519 sobre RSA para claves SSH nuevas?", type:"single", pts:1,
+      opts:["Genera claves más cortas, es más rápido y depende menos de un buen generador aleatorio","Porque RSA ya no es compatible con OpenSSH","Porque Ed25519 no requiere passphrase","Porque Ed25519 es el único algoritmo que soporta ssh-copy-id"], correct:0,
+      exp:"Ed25519 ofrece claves más cortas con seguridad equivalente o mayor, cálculo más rápido, y es menos sensible a un generador de números aleatorios débil que RSA." },
+    { cat:"Criptografía SSH", q:"En el flujo de autenticación por clave, ¿qué hace el servidor con la clave pública del cliente?", type:"single", pts:1,
+      opts:["Genera un desafío cifrado con ella, que solo la clave privada correspondiente puede resolver","La usa para cifrar toda la sesión de datos","La almacena como respaldo del cliente","La reenvía a un servidor de autenticación central"], correct:0,
+      exp:"El servidor cifra un valor de desafío con la clave pública; solo quien tiene la clave privada correspondiente puede descifrarlo y responder correctamente." },
+    { cat:"Criptografía SSH", q:"¿Cuál es la regla básica sobre la clave privada SSH?", type:"single", pts:1,
+      opts:["Nunca debe compartirse ni salir de la máquina del usuario","Debe copiarse al servidor junto con la pública","Puede compartirse siempre que tenga passphrase","Debe subirse a un repositorio privado como respaldo"], correct:0,
+      exp:"La clave privada es el secreto que sostiene toda la autenticación: si se filtra, cualquiera puede hacerse pasar por el usuario en todos los servidores donde esté su clave pública." },
+    { cat:"ssh-keygen/ssh-copy-id", q:"¿Qué genera <code>ssh-keygen -t ed25519 -C 'ctt@alumno'</code>?", type:"single", pts:1,
+      opts:["Un par de claves pública/privada usando el algoritmo Ed25519, con un comentario identificador","Solo una clave pública","Una contraseña aleatoria para el usuario","Un certificado SSL para el servidor"], correct:0,
+      exp:"<code>-t ed25519</code> define el algoritmo; <code>-C</code> agrega un comentario (típicamente email o identificador) útil para reconocer la clave después." },
+    { cat:"ssh-keygen/ssh-copy-id", q:"¿Qué hace <code>ssh-copy-id user@servidor</code>?", type:"single", pts:1,
+      opts:["Copia la clave pública local a <code>~/.ssh/authorized_keys</code> del servidor","Genera un nuevo par de claves en el servidor","Elimina las claves existentes del servidor","Descarga la clave privada del servidor"], correct:0,
+      exp:"<code>ssh-copy-id</code> automatiza el proceso de agregar tu clave pública al archivo <code>authorized_keys</code> del usuario remoto (pidiendo la contraseña una última vez)." },
+    { cat:"ssh-keygen/ssh-copy-id", q:"¿Qué permisos debe tener el archivo de clave privada (ej. <code>~/.ssh/id_ed25519</code>) para que SSH la acepte?", type:"single", pts:1,
+      opts:["600 (solo lectura/escritura para el dueño)","644 (lectura para todos)","777 (todos los permisos para todos)","No importa, SSH no valida permisos"], correct:0,
+      exp:"SSH rechaza claves privadas con permisos laxos. Deben tener <code>600</code>: solo el dueño puede leerla y escribirla." },
+    { cat:"ssh-keygen/ssh-copy-id", q:"¿Para qué sirve la opción <code>-i</code> en <code>ssh -i ~/.ssh/id_ctt user@servidor</code>?", type:"single", pts:1,
+      opts:["Usa una clave privada específica en vez de la default","Indica el puerto de conexión","Activa el modo interactivo","Ignora la verificación del host"], correct:0,
+      exp:"<code>-i</code> (identity file) le indica a SSH qué archivo de clave privada usar, útil cuando se manejan varias claves para distintos servidores." },
+    { cat:"ssh-keygen/ssh-copy-id", q:"¿Qué hace <code>ssh -p 2222 admin@servidor</code>?", type:"single", pts:1,
+      opts:["Conecta al servidor usando el puerto 2222 en vez del 22 por defecto","Conecta con contraseña de 2222 caracteres","Limita la sesión a 2222 segundos","Ejecuta el comando 2222 veces"], correct:0,
+      exp:"<code>-p</code> especifica el puerto TCP al que SSH debe conectarse, necesario cuando el servidor cambió el puerto por defecto como parte del hardening." },
+    { cat:"scp/sftp", q:"¿Qué hace <code>scp -r /proyectos/ user@srv:/backup/</code>?", type:"single", pts:1,
+      opts:["Copia el directorio /proyectos/ completo, de forma recursiva, al servidor","Copia solo los archivos sueltos de /proyectos/, sin subdirectorios","Sincroniza /proyectos/ de forma incremental","Elimina /backup/ antes de copiar"], correct:0,
+      exp:"<code>-r</code> hace que <code>scp</code> copie directorios de forma recursiva, incluyendo todo su contenido y subdirectorios." },
+    { cat:"scp/sftp", q:"¿Cómo se especifica un puerto no estándar en <code>scp</code>, a diferencia de <code>ssh</code>?", type:"single", pts:1,
+      opts:["Con <code>-P</code> mayúscula (en ssh es <code>-p</code> minúscula)","De la misma forma, con <code>-p</code> minúscula","No se puede especificar puerto en scp","Con la variable de entorno SCP_PORT"], correct:0,
+      exp:"Es una inconsistencia histórica de las herramientas: <code>ssh</code> usa <code>-p</code> minúscula para el puerto, mientras que <code>scp</code> usa <code>-P</code> mayúscula." },
+    { cat:"scp/sftp", q:"Dentro de una sesión <code>sftp</code>, ¿qué comando descarga un archivo del servidor?", type:"single", pts:1,
+      opts:["<code>get</code>","<code>pull</code>","<code>download</code>","<code>fetch</code>"], correct:0,
+      exp:"En sftp, <code>get archivo</code> descarga del servidor al cliente, y <code>put archivo</code> sube del cliente al servidor." },
+    { cat:"scp/sftp", q:"¿Cuándo conviene usar <code>sftp</code> en lugar de <code>scp</code>?", type:"single", pts:1,
+      opts:["Cuando hace falta explorar el sistema de archivos remoto antes de decidir qué transferir","Cuando se necesita máxima velocidad para un solo archivo","scp y sftp son intercambiables, no hay diferencia práctica","sftp solo funciona con archivos de texto"], correct:0,
+      exp:"<code>sftp</code> ofrece una sesión interactiva navegable (<code>ls</code>, <code>cd</code>, <code>pwd</code>) antes de transferir; <code>scp</code> es más directo para copiar algo puntual desde la línea de comandos." },
+    { cat:"scp/sftp", q:"¿Qué hace <code>scp archivo.txt user@srv:/tmp/</code>?", type:"single", pts:1,
+      opts:["Copia archivo.txt desde la máquina local hacia /tmp/ en el servidor","Descarga /tmp/archivo.txt del servidor a la máquina local","Elimina archivo.txt del servidor","Compara archivo.txt local con el remoto"], correct:0,
+      exp:"Sin el prefijo <code>user@host:</code> en el origen, <code>scp</code> asume que el archivo es local y lo copia hacia el destino remoto indicado." },
+    { cat:"Hardening sshd_config", q:"¿Qué previene <code>PermitRootLogin no</code>?", type:"single", pts:1,
+      opts:["Que se pueda iniciar sesión SSH directamente como root","Que el usuario root exista en el sistema","Que se pueda usar sudo","Que se puedan crear nuevos usuarios"], correct:0,
+      exp:"Con <code>PermitRootLogin no</code>, nadie puede autenticarse por SSH directamente como root — hay que entrar como usuario normal y usar <code>sudo</code>." },
+    { cat:"Hardening sshd_config", q:"¿Qué fuerza <code>PasswordAuthentication no</code>?", type:"single", pts:1,
+      opts:["Que la única forma de autenticarse sea por clave pública/privada","Que se deba usar una contraseña de al menos 16 caracteres","Que las contraseñas se envíen cifradas","Que se deshabilite completamente el acceso SSH"], correct:0,
+      exp:"Deshabilita la autenticación por contraseña por completo, obligando a usar claves — elimina el vector de ataque de fuerza bruta sobre contraseñas." },
+    { cat:"Hardening sshd_config", q:"¿Por qué cambiar <code>Port</code> de 22 a otro valor (ej. 2222) NO es seguridad real, sino reducción de ruido?", type:"single", pts:1,
+      opts:["Porque solo evita el escaneo automático de bots, pero no detiene a un atacante dirigido que escanee todos los puertos","Porque cambia la forma en que SSH cifra el tráfico","Porque hace que las claves SSH sean más difíciles de robar","Porque bloquea automáticamente las IPs desconocidas"], correct:0,
+      exp:"Cambiar el puerto reduce drásticamente los intentos automáticos de bots que escanean solo el 22, pero un atacante dirigido que escanee todos los puertos igual lo va a encontrar — no reemplaza al resto del hardening." },
+    { cat:"Hardening sshd_config", q:"¿Qué limita <code>MaxAuthTries 3</code>?", type:"single", pts:1,
+      opts:["La cantidad de intentos de autenticación permitidos por conexión","La cantidad de usuarios que pueden conectarse simultáneamente","El tiempo máximo de una sesión SSH","La cantidad de claves que puede tener un usuario"], correct:0,
+      exp:"<code>MaxAuthTries</code> corta la conexión después de ese número de intentos fallidos de autenticación, dificultando ataques de fuerza bruta interactivos." },
+    { cat:"Hardening sshd_config", q:"¿Qué hace la directiva <code>AllowUsers admin alumno1</code>?", type:"single", pts:1,
+      opts:["Restringe el acceso SSH exclusivamente a esos usuarios, aunque otros tengan cuenta en el sistema","Le da privilegios de administrador a esos usuarios","Crea esos usuarios si no existen","Permite que esos usuarios se conecten sin clave"], correct:0,
+      exp:"<code>AllowUsers</code> es una whitelist explícita: solo esos usuarios pueden autenticarse por SSH, sin importar qué otras cuentas existan en el sistema." },
+    { cat:"Hardening sshd_config", q:"¿Para qué sirve ejecutar <code>sudo sshd -t</code> antes de reiniciar el servicio SSH?", type:"single", pts:1,
+      opts:["Valida la sintaxis de sshd_config sin aplicar cambios, evitando quedar bloqueado por un error de configuración","Reinicia el servicio de forma segura","Genera un nuevo par de claves del servidor","Muestra las conexiones activas"], correct:0,
+      exp:"<code>sshd -t</code> hace un test de sintaxis del archivo de configuración. Es el paso obligatorio antes de <code>systemctl restart ssh</code> para no aplicar una configuración rota." },
+    { cat:"Hardening sshd_config", q:"¿Cuáles de las siguientes son directivas válidas de <code>sshd_config</code>?", type:"multi", pts:2,
+      opts:["<code>PermitRootLogin</code>","<code>PasswordAuthentication</code>","<code>MaxAuthTries</code>","<code>RestartSec</code>","<code>AllowUsers</code>","<code>CPUQuota</code>"], correct:[0,1,2,4],
+      exp:"<code>PermitRootLogin</code>, <code>PasswordAuthentication</code>, <code>MaxAuthTries</code> y <code>AllowUsers</code> son directivas de <code>sshd_config</code>. <code>RestartSec</code> y <code>CPUQuota</code> pertenecen a unit files de systemd, no a SSH." },
+    { cat:"Port forwarding / ProxyJump", q:"¿Qué hace <code>ssh -L 8080:localhost:80 user@srv</code>?", type:"single", pts:1,
+      opts:["Reenvía el puerto 8080 local al puerto 80 del servidor remoto, a través del túnel cifrado","Abre el puerto 8080 del servidor hacia internet","Cambia el puerto de conexión SSH a 8080","Bloquea el puerto 80 en el servidor"], correct:0,
+      exp:"<code>-L</code> (local forward) hace que conectarse a <code>localhost:8080</code> en tu máquina en realidad te lleve al puerto 80 del servidor remoto, todo cifrado por el canal SSH." },
+    { cat:"Port forwarding / ProxyJump", q:"¿Qué crea <code>ssh -D 1080 user@srv</code>?", type:"single", pts:1,
+      opts:["Un proxy SOCKS dinámico que enruta el tráfico configurado a través del servidor","Un túnel fijo hacia el puerto 1080 del servidor","Una copia de seguridad del servidor en el puerto 1080","Una sesión SFTP en el puerto 1080"], correct:0,
+      exp:"<code>-D</code> (dynamic forward) convierte a SSH en un proxy SOCKS: cualquier aplicación configurada para usar ese proxy enruta su tráfico cifrado a través del servidor remoto." },
+    { cat:"Port forwarding / ProxyJump", q:"¿Para qué se usa <code>ProxyJump</code>?", type:"single", pts:1,
+      opts:["Para saltar a través de un bastion host y llegar a un servidor interno sin IP pública","Para acelerar la velocidad de transferencia de SSH","Para cambiar automáticamente de usuario durante la sesión","Para generar nuevas claves SSH"], correct:0,
+      exp:"<code>ProxyJump</code> (o <code>ssh -J</code>) permite conectar a un servidor que solo es alcanzable a través de otro host intermedio (bastion), típico en redes corporativas segmentadas." },
+    { cat:"Port forwarding / ProxyJump", q:"¿Qué hace <code>ssh -R 9000:localhost:3000 user@srv</code>?", type:"single", pts:1,
+      opts:["Reenvía el puerto 9000 del servidor remoto hacia el puerto 3000 de tu máquina local","Es idéntico a -L, solo cambia la sintaxis","Cierra el puerto 3000 local","Sube un archivo al puerto 9000 remoto"], correct:0,
+      exp:"<code>-R</code> (remote forward) es el sentido inverso a <code>-L</code>: expone un puerto en el servidor remoto que redirige el tráfico de vuelta hacia tu máquina local." },
+    { cat:"Port forwarding / ProxyJump", q:"¿Cuál es la diferencia conceptual entre <code>-L</code> y <code>-R</code>?", type:"single", pts:1,
+      opts:["-L reenvía un puerto local hacia el remoto; -R reenvía un puerto remoto hacia el local","Ambos hacen exactamente lo mismo","-L solo funciona con HTTP; -R con cualquier protocolo","-R requiere clave RSA; -L funciona con cualquier tipo de clave"], correct:0,
+      exp:"-L (local) trae algo del servidor hacia vos; -R (remote) expone algo tuyo hacia el servidor. La dirección del reenvío es la diferencia clave." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Para qué sirve <code>ssh-agent</code>?", type:"single", pts:1,
+      opts:["Mantiene la clave privada descifrada en memoria durante la sesión, evitando escribir la passphrase en cada conexión","Genera automáticamente nuevas claves cada día","Bloquea IPs con intentos fallidos","Reemplaza a sshd como servidor SSH"], correct:0,
+      exp:"<code>ssh-agent</code> descifra la clave una vez (pidiendo la passphrase) y la mantiene disponible en memoria para el resto de la sesión, sin volver a pedirla en cada conexión." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Qué hace <code>ssh-add ~/.ssh/id_ed25519</code>?", type:"single", pts:1,
+      opts:["Carga esa clave privada en el ssh-agent activo","Genera una nueva clave con ese nombre","Copia la clave al servidor remoto","Elimina la clave del disco"], correct:0,
+      exp:"<code>ssh-add</code> agrega una clave privada al agente en ejecución, pidiendo la passphrase una sola vez para esa sesión." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Qué hace <code>fail2ban</code>?", type:"single", pts:1,
+      opts:["Monitorea logs de autenticación y banea temporalmente las IPs con demasiados intentos fallidos","Genera claves SSH automáticamente","Reemplaza la autenticación por contraseña","Cifra el tráfico SSH con un algoritmo adicional"], correct:0,
+      exp:"<code>fail2ban</code> analiza logs (como los de SSH) y, al detectar un patrón de intentos fallidos repetidos desde una IP, la banea temporalmente vía reglas de firewall." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Para qué sirve <code>journalctl -f -u ssh</code> durante una auditoría de seguridad?", type:"single", pts:1,
+      opts:["Para monitorear en tiempo real los intentos de conexión (exitosos y fallidos) al servicio SSH","Para reiniciar el servicio SSH automáticamente","Para generar un reporte en PDF","Para desactivar temporalmente el logging"], correct:0,
+      exp:"El modo <code>-f</code> (follow) permite observar en vivo los eventos de autenticación SSH a medida que ocurren, útil para detectar ataques en curso." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Qué comando muestra las sesiones de usuario activas en el sistema en este momento?", type:"single", pts:1,
+      opts:["<code>who</code>","<code>ps aux</code>","<code>ss -tulnp</code>","<code>fail2ban-client</code>"], correct:0,
+      exp:"<code>who</code> lista quién está conectado al sistema en ese momento y desde dónde, incluyendo sesiones SSH activas." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Cuál es el principal riesgo de dejar <code>PermitRootLogin yes</code> en un servidor expuesto a internet?", type:"single", pts:1,
+      opts:["Un atacante solo necesita adivinar la contraseña de una cuenta conocida (root) para tener control total del sistema","Ninguno, mientras se use una contraseña larga","Hace que SSH funcione más lento","Impide usar claves públicas"], correct:0,
+      exp:"'root' es un nombre de usuario conocido y universal en sistemas Unix — permitir su login directo reduce el ataque a adivinar solo la contraseña, en vez de también tener que adivinar el usuario." },
+    { cat:"ssh-agent / fail2ban / monitoreo", q:"¿Qué controla la directiva <code>LoginGraceTime</code> en <code>sshd_config</code>?", type:"single", pts:1,
+      opts:["Los segundos que el servidor espera a que el cliente complete el login antes de desconectar","La cantidad de usuarios que pueden estar logueados a la vez","El tiempo de vida de una clave SSH","El tiempo entre reinicios automáticos del servicio"], correct:0,
+      exp:"<code>LoginGraceTime</code> define cuánto tiempo tiene el cliente para completar la autenticación antes de que el servidor cierre la conexión, evitando conexiones abiertas indefinidamente sin autenticarse." }
+  ]
+},
+{
+  name: "Shell Scripting y Automatización",
+  short: "U3",
+  desc: "Estructura profesional de scripts, variables/argumentos/getopts, bucles, funciones/trap, logging, crontab, shellcheck",
+  questions: [
+    { cat:"Estructura / set -euo pipefail", q:"¿Qué efecto tiene la opción <code>-e</code> de <code>set</code>?", type:"single", pts:1,
+      opts:["El script sale inmediatamente si cualquier comando devuelve un exit code distinto de 0","El script ignora todos los errores","El script pausa ante cualquier error, esperando confirmación","Habilita el modo debug (bash -x)"], correct:0,
+      exp:"<code>set -e</code> aborta la ejecución del script apenas un comando falla (exit code ≠ 0), evitando que el script siga corriendo sobre un estado inconsistente." },
+    { cat:"Estructura / set -euo pipefail", q:"¿Qué previene la opción <code>-u</code> de <code>set</code>?", type:"single", pts:1,
+      opts:["El uso de variables no definidas, que de otro modo se expanden silenciosamente a vacío","La ejecución de comandos como root","Los errores de sintaxis en el script","La sobreescritura accidental de archivos"], correct:0,
+      exp:"Sin <code>-u</code>, referenciar una variable no definida se expande a una cadena vacía sin avisar — <code>-u</code> convierte eso en un error explícito, atrapando typos." },
+    { cat:"Estructura / set -euo pipefail", q:"¿Qué corrige <code>set -o pipefail</code> respecto al comportamiento por defecto de Bash en un pipe?", type:"single", pts:1,
+      opts:["Sin pipefail, el exit code del pipe es el del último comando; con pipefail, es el de cualquier comando que falle en la cadena","Hace que los pipes se ejecuten en paralelo","Permite usar más de 3 comandos en un mismo pipe","Redirige automáticamente los errores a un archivo"], correct:0,
+      exp:"Por defecto, Bash solo mira el exit code del último comando de un pipe. Con <code>pipefail</code>, si cualquier comando de la cadena falla, todo el pipe se considera fallido." },
+    { cat:"Estructura / set -euo pipefail", q:"¿Cuál es el shebang recomendado para un script Bash portable?", type:"single", pts:1,
+      opts:["<code>#!/usr/bin/env bash</code>","<code>#!/bash</code>","<code>#!bash</code>","<code>#!/usr/bin/bash -e</code>"], correct:0,
+      exp:"<code>#!/usr/bin/env bash</code> busca <code>bash</code> en el PATH del sistema en lugar de asumir una ruta fija, siendo más portable entre distribuciones." },
+    { cat:"Estructura / set -euo pipefail", q:"¿Para qué se usa <code>chmod +x mi_script.sh</code>?", type:"single", pts:1,
+      opts:["Para dar permiso de ejecución al archivo y poder correrlo con ./mi_script.sh","Para hacerlo legible por todos los usuarios","Para convertirlo en un script de systemd","Para protegerlo contra ediciones accidentales"], correct:0,
+      exp:"Sin el bit de ejecución, el sistema no permite correr el archivo directamente aunque contenga código Bash válido; <code>chmod +x</code> lo habilita." },
+    { cat:"Estructura / set -euo pipefail", q:"¿Por qué es buena práctica declarar constantes con <code>readonly</code> en un script?", type:"single", pts:1,
+      opts:["Porque evita que se modifiquen accidentalmente más adelante en el script","Porque hace que el script corra más rápido","Porque es obligatorio en Bash 5+","Porque permite exportarlas automáticamente a subprocesos"], correct:0,
+      exp:"<code>readonly</code> convierte la variable en de solo lectura: cualquier intento posterior de reasignarla genera un error, protegiendo valores que no deberían cambiar (como rutas de log o umbrales)." },
+    { cat:"Variables / getopts", q:"¿Qué representa <code>$#</code> dentro de un script?", type:"single", pts:1,
+      opts:["La cantidad de argumentos posicionales recibidos","El PID del script","El exit code del último comando","El nombre del script"], correct:0,
+      exp:"<code>$#</code> contiene el número de argumentos que se pasaron al script (o a una función) al invocarlo." },
+    { cat:"Variables / getopts", q:"¿Por qué se recomienda usar <code>\"$@\"</code> (entre comillas) en vez de <code>$@</code> sin comillas?", type:"single", pts:1,
+      opts:["Para preservar cada argumento como una palabra separada, incluso si contiene espacios","Porque sin comillas $@ genera un error de sintaxis","Porque $@ sin comillas solo funciona con un argumento","No hay diferencia real entre ambas formas"], correct:0,
+      exp:"<code>\"$@\"</code> expande cada argumento como una palabra independiente y entre comillas, preservando espacios internos; sin comillas, sufre word-splitting como cualquier otra variable." },
+    { cat:"Variables / getopts", q:"¿Qué contiene la variable <code>$?</code> inmediatamente después de ejecutar un comando?", type:"single", pts:1,
+      opts:["El exit code del último comando ejecutado","El PID del último comando","La cantidad de argumentos del script","El nombre del último comando"], correct:0,
+      exp:"<code>$?</code> guarda el código de salida (0 = éxito, distinto de 0 = error) del comando, función o pipe más reciente." },
+    { cat:"Variables / getopts", q:"¿Qué representa <code>$0</code> dentro de un script?", type:"single", pts:1,
+      opts:["El nombre con el que se invocó el script","El primer argumento pasado al script","El PID del proceso actual","El exit code inicial"], correct:0,
+      exp:"<code>$0</code> es el nombre del script tal como fue invocado (ej. <code>./mi_script.sh</code>), útil para mensajes de uso." },
+    { cat:"Variables / getopts", q:"En <code>while getopts \"s:u:v\" opt; do ... done</code>, ¿qué indican los dos puntos después de <code>s</code> y <code>u</code>?", type:"single", pts:1,
+      opts:["Que esas opciones requieren obligatoriamente un argumento (disponible en OPTARG)","Que esas opciones son opcionales","Que esas opciones solo pueden usarse una vez","Que esas opciones son mutuamente excluyentes"], correct:0,
+      exp:"Un <code>:</code> después de la letra en el string de <code>getopts</code> indica que esa opción espera un valor, el cual queda disponible en la variable <code>OPTARG</code>. Sin <code>:</code>, es una flag booleana (como <code>-v</code>)." },
+    { cat:"Variables / getopts", q:"Dentro del bucle de <code>getopts</code>, ¿qué variable contiene el valor pasado a una opción como <code>-s nginx</code>?", type:"single", pts:1,
+      opts:["<code>OPTARG</code>","<code>$1</code>","<code>OPTIND</code>","<code>$?</code>"], correct:0,
+      exp:"<code>OPTARG</code> contiene el argumento asociado a la opción actual que <code>getopts</code> está procesando; <code>OPTIND</code> es el índice del próximo argumento a procesar." },
+    { cat:"Variables / getopts", q:"¿Cuáles de las siguientes son variables especiales válidas de Bash?", type:"multi", pts:2,
+      opts:["<code>$#</code>","<code>$@</code>","<code>$$</code>","<code>$&amp;</code>","<code>$?</code>","<code>$%</code>"], correct:[0,1,2,4],
+      exp:"<code>$#</code> (cant. de argumentos), <code>$@</code> (todos los argumentos), <code>$$</code> (PID del script) y <code>$?</code> (exit code) son variables especiales válidas. <code>$&amp;</code> y <code>$%</code> no existen en Bash." },
+    { cat:"Bucles", q:"¿Cuándo conviene usar <code>for</code> en vez de <code>while</code>?", type:"single", pts:1,
+      opts:["Cuando se itera sobre una lista conocida de elementos (archivos, palabras, rangos)","Cuando la condición de corte depende del resultado de un comando externo","for solo sirve para contar números","while no puede iterar sobre listas"], correct:0,
+      exp:"<code>for</code> es ideal para recorrer una lista finita y conocida de antemano (<code>for x in a b c</code>); <code>while</code> es mejor cuando la cantidad de iteraciones depende de una condición que cambia en tiempo de ejecución." },
+    { cat:"Bucles", q:"¿Por qué <code>while IFS= read -r linea; do ...; done &lt; archivo</code> es más seguro que <code>for linea in $(cat archivo)</code>?", type:"single", pts:1,
+      opts:["Porque procesa línea por línea sin sufrir word-splitting ni expansión de comodines","Porque es más rápido en todos los casos","Porque while siempre es más rápido que for","No hay ninguna diferencia práctica"], correct:0,
+      exp:"<code>for x in $(cat archivo)</code> separa por espacios y expande comodines, rompiendo con líneas que contienen espacios; <code>while read</code> procesa línea por línea de forma predecible y segura." },
+    { cat:"Bucles", q:"¿Cómo se comporta un bucle <code>until</code> respecto a <code>while</code>?", type:"single", pts:1,
+      opts:["until repite MIENTRAS la condición sea falsa (se detiene cuando se vuelve verdadera); es el inverso de while","until y while son exactamente lo mismo","until solo puede iterar un número fijo de veces","until no admite condiciones compuestas"], correct:0,
+      exp:"<code>until condición; do ...; done</code> ejecuta el bloque repetidamente hasta que la condición se cumpla — es la lógica inversa a <code>while</code>." },
+    { cat:"Bucles", q:"En <code>for servicio in ssh nginx mysql; do ...; done</code>, ¿qué hace la primera línea?", type:"single", pts:1,
+      opts:["Itera la variable servicio sobre los tres valores de la lista, uno por vuelta","Ejecuta los tres servicios en paralelo","Verifica que existan los tres servicios antes de continuar","Concatena los tres nombres en una sola variable"], correct:0,
+      exp:"El bucle <code>for var in lista</code> asigna a <code>var</code> cada elemento de la lista, uno por iteración, en el orden en que aparecen." },
+    { cat:"Bucles", q:"¿Qué problema concreto tiene <code>for archivo in $(ls *.txt)</code> frente a un archivo llamado <code>'reporte final.txt'</code>?", type:"single", pts:1,
+      opts:["El bucle lo trata como dos elementos separados ('reporte' y 'final.txt') por el espacio en el nombre","No hay ningún problema, funciona igual","ls no puede listar archivos .txt","El bucle se detiene con un error de sintaxis"], correct:0,
+      exp:"Al no estar entre comillas, la sustitución de comandos sufre word-splitting: el espacio en el nombre del archivo lo parte en dos 'palabras' distintas para el bucle." },
+    { cat:"Funciones / trap", q:"¿Por qué se declaran las variables internas de una función con <code>local</code>?", type:"single", pts:1,
+      opts:["Para evitar que colisionen con variables globales del mismo nombre en otras partes del script","Para que la variable persista después de que termine la función","Porque Bash lo exige por sintaxis","Para que la variable se exporte automáticamente a subprocesos"], correct:0,
+      exp:"Sin <code>local</code>, una variable asignada dentro de una función es global por defecto, pudiendo pisar accidentalmente una variable con el mismo nombre usada en otra parte del script." },
+    { cat:"Funciones / trap", q:"Por convención Unix, ¿qué código de retorno indica éxito en una función o comando?", type:"single", pts:1,
+      opts:["0","1","-1","Cualquier número positivo"], correct:0,
+      exp:"La convención POSIX es que <code>0</code> significa éxito, y cualquier valor distinto de 0 (1-255) indica algún tipo de error o condición anómala." },
+    { cat:"Funciones / trap", q:"¿Para qué sirve <code>trap limpiar EXIT</code> en un script?", type:"single", pts:1,
+      opts:["Garantiza que la función limpiar se ejecute siempre al terminar el script, con éxito o error","Detiene el script inmediatamente si limpiar falla","Ejecuta limpiar solo si el usuario presiona Ctrl+C","Registra un log cada vez que se llama a una función"], correct:0,
+      exp:"<code>trap ... EXIT</code> asegura que ese comando (o función) se ejecute siempre al salir del script, sin importar si terminó con éxito, con error, o por una señal — ideal para limpiar archivos temporales." },
+    { cat:"Funciones / trap", q:"¿Qué señal captura típicamente <code>trap 'echo cancelado; exit 130' INT</code>?", type:"single", pts:1,
+      opts:["Ctrl+C (SIGINT)","El cierre normal del script","Un error de sintaxis","La señal SIGKILL"], correct:0,
+      exp:"<code>INT</code> corresponde a SIGINT, la señal que se envía al presionar Ctrl+C. El trap permite manejarla con un mensaje y una salida controlada en vez de terminar abruptamente." },
+    { cat:"Funciones / trap", q:"¿Qué diferencia hay entre <code>return</code> y <code>exit</code> dentro de una función?", type:"single", pts:1,
+      opts:["return termina solo la función, devolviendo el control al script; exit termina todo el script","Son exactamente lo mismo dentro de una función","return solo funciona en el bucle principal","exit no puede usarse dentro de una función"], correct:0,
+      exp:"<code>return</code> finaliza la ejecución de la función actual y devuelve un código de salida a quien la llamó; <code>exit</code> termina el script completo, sin importar en qué punto se encuentre." },
+    { cat:"Logging", q:"¿Qué hace <code>logger -t 'ctt-monitor' 'mensaje'</code>?", type:"single", pts:1,
+      opts:["Envía el mensaje al syslog del sistema, etiquetado con el tag indicado","Imprime el mensaje por pantalla en color","Guarda el mensaje solo en un archivo local","Envía un email con el mensaje"], correct:0,
+      exp:"<code>logger</code> registra el mensaje en el syslog del sistema (visible con <code>journalctl</code> o en <code>/var/log/syslog</code>), con el tag útil para filtrar después." },
+    { cat:"Logging", q:"¿Para qué se usa un heredoc (<code>cat &lt;&lt;EOF ... EOF</code>) en un script?", type:"single", pts:1,
+      opts:["Para generar un bloque de texto de varias líneas sin encadenar múltiples echo","Para leer la entrada del usuario de forma interactiva","Para comprimir un archivo","Para definir una función anónima"], correct:0,
+      exp:"El heredoc permite escribir un bloque de texto multilínea (con variables interpoladas) de forma legible, en vez de concatenar muchos <code>echo</code>." },
+    { cat:"Logging", q:"¿Qué combina el patrón de 'logging dual' usado en scripts de administración?", type:"single", pts:1,
+      opts:["Registro en el syslog del sistema (logger) y en un archivo propio con fecha","Dos archivos de log idénticos por redundancia","Logs en español y en inglés simultáneamente","Envío del log por email y por SMS"], correct:0,
+      exp:"El logging dual combina <code>logger</code> (integración con el syslog centralizado, visible con journalctl) y un archivo de log propio con fecha en el nombre, fácil de revisar manualmente." },
+    { cat:"Logging", q:"¿Para qué sirve <code>journalctl -t &lt;tag&gt;</code>?", type:"single", pts:1,
+      opts:["Filtra los mensajes del journal que fueron enviados con ese tag por logger","Reinicia el servicio asociado a ese tag","Elimina los logs con ese tag","Crea un nuevo tag de logging"], correct:0,
+      exp:"<code>-t</code> filtra el journal por el identificador (tag) usado al llamar a <code>logger -t tag mensaje</code>, facilitando encontrar los mensajes de un script específico." },
+    { cat:"crontab", q:"¿Cuál es el orden correcto de los 5 campos de tiempo en una línea de crontab?", type:"single", pts:1,
+      opts:["minuto, hora, día del mes, mes, día de la semana","hora, minuto, día del mes, mes, día de la semana","día de la semana, mes, día del mes, hora, minuto","minuto, hora, mes, día del mes, día de la semana"], correct:0,
+      exp:"El formato estándar de crontab es: <code>minuto hora dia_mes mes dia_semana comando</code>." },
+    { cat:"crontab", q:"¿Qué significa la expresión <code>*/15 * * * *</code>?", type:"single", pts:1,
+      opts:["Se ejecuta cada 15 minutos","Se ejecuta a las 15 horas todos los días","Se ejecuta el día 15 de cada mes","Se ejecuta 15 veces por día, a horario fijo"], correct:0,
+      exp:"<code>*/15</code> en el campo de minutos significa 'cada 15 unidades', es decir: minuto 0, 15, 30 y 45 de cada hora." },
+    { cat:"crontab", q:"¿Qué hace la directiva especial <code>@reboot</code> en crontab?", type:"single", pts:1,
+      opts:["Ejecuta el comando una sola vez, cada vez que el sistema arranca","Reinicia el sistema en el horario indicado","Ejecuta el comando cada hora después del arranque","Cancela todas las demás tareas programadas"], correct:0,
+      exp:"<code>@reboot</code> es un atajo que dispara el comando una vez cada vez que el sistema termina de arrancar, sin necesidad de especificar los 5 campos de tiempo." },
+    { cat:"crontab", q:"¿Por qué es obligatorio usar rutas absolutas dentro de los comandos programados en cron?", type:"single", pts:1,
+      opts:["Porque cron ejecuta con un PATH muy reducido, distinto al de una shell interactiva","Porque cron no permite rutas relativas por sintaxis","Porque las rutas absolutas son más rápidas de resolver","Porque cron corre siempre como root"], correct:0,
+      exp:"El entorno con el que cron ejecuta las tareas tiene un <code>PATH</code> mínimo, muy distinto al de tu shell interactiva — un comando que funciona a mano puede fallar en cron si depende de rutas relativas o del PATH completo." },
+    { cat:"crontab", q:"¿Qué hace <code>crontab -r</code>?", type:"single", pts:1,
+      opts:["Elimina TODAS las tareas programadas del usuario, sin pedir confirmación","Reinicia el servicio de cron","Muestra las tareas programadas","Repara una entrada de crontab con errores de sintaxis"], correct:0,
+      exp:"<code>crontab -r</code> borra por completo el crontab del usuario actual de forma inmediata y sin confirmación — un comando peligroso si se ejecuta por error en vez de <code>-e</code> o <code>-l</code>." },
+    { cat:"shellcheck", q:"¿Qué tipo de errores detecta principalmente <code>shellcheck</code>?", type:"single", pts:1,
+      opts:["Errores comunes de Bash: variables sin comillas, comparaciones mal formadas, código problemático antes de ejecutarlo","Errores de ortografía en los comentarios","Vulnerabilidades de red del servidor","Errores de permisos del sistema de archivos"], correct:0,
+      exp:"<code>shellcheck</code> es un analizador estático: revisa el script sin ejecutarlo y señala patrones propensos a bugs, como variables sin comillas o comparaciones incorrectas, antes de que causen un problema real." }
+  ]
+}
+];
+
+/* ===================== CONFIG ===================== */
+const PENALTY = 0.25; // puntos que se descuentan por cada pregunta mal contestada
+const LETTERS = "ABCDEF";
+
+/* ===================== ESTADO ===================== */
+let ALL = [];              // preguntas seleccionadas para esta sesión
+let TOTAL_Q = 0, TOTAL_PTS = 0;
+let idx = 0;
+let answers = [];          // paralelo a ALL: null (sin responder) | number (single) | number[] (multi)
+let student = { nombre:"", apellido:"", ci:"" };
+let navOpen = false;
+
+const startbody = document.getElementById("startbody");
+const startcard = document.getElementById("startcard");
+const qcard = document.getElementById("qcard");
+const progress = document.getElementById("progress");
+const qbody = document.getElementById("qbody");
+const tlabel = document.getElementById("tlabel");
+const pbar = document.getElementById("pbar");
+const ptext = document.getElementById("ptext");
+const ppts = document.getElementById("ppts");
+const navToggleBtn = document.getElementById("navtoggle");
+const navToggleTxt = document.getElementById("navtoggletxt");
+const navGrid = document.getElementById("navgrid");
+const rcard = document.getElementById("rcard");
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmt(n){
+  n = Math.round(n*100)/100;
+  if (Object.is(n,-0)) n = 0;
+  if (Number.isInteger(n)) return String(n).replace(".", ",");
+  let s = n.toFixed(2);
+  if (s.endsWith("0")) s = s.slice(0,-1);
+  return s.replace(".", ",");
+}
+
+/* ---- pantalla de inicio: datos del alumno + partes ---- */
+function renderStart(){
+  const counts = PARTS.map(p => p.questions.length);
+  const ptsPer = PARTS.map(p => p.questions.reduce((a,q)=>a+q.pts,0));
+  let html = "";
+  html += '<div class="sectionlbl">Datos del alumno</div>';
+  html += '<div class="formgrid">' +
+          '<div class="field"><label for="fnombre">Nombre *</label><input id="fnombre" type="text" autocomplete="given-name" value="' + esc(student.nombre) + '"></div>' +
+          '<div class="field"><label for="fapellido">Apellido *</label><input id="fapellido" type="text" autocomplete="family-name" value="' + esc(student.apellido) + '"></div>' +
+          '<div class="field full"><label for="fci">C.I. *</label><input id="fci" type="text" inputmode="numeric" autocomplete="off" placeholder="Sin puntos ni guiones" value="' + esc(student.ci) + '"></div>' +
+          '</div>';
+  html += '<div class="sectionlbl">Contenidos a evaluar</div>';
+  PARTS.forEach((p, i) => {
+    html += '<label class="part-row"><input type="checkbox" class="psel" data-i="' + i + '" checked>' +
+            '<span class="pi"><span class="pt">' + p.name + '</span><span class="pd">' + p.desc + '</span></span>' +
+            '<span class="pc">' + counts[i] + ' preg · ' + ptsPer[i] + ' pts</span></label>';
+  });
+  html += '<div class="startfoot"><span id="totalsel">' + counts.reduce((a,b)=>a+b,0) + ' preguntas seleccionadas</span>' +
+          '<button type="button" class="btn primary" id="startbtn">Comenzar evaluación →</button></div>';
+  html += '<div class="warn" id="startwarn">Completá nombre, apellido y C.I., y seleccioná al menos un bloque de contenidos.</div>';
+  startbody.innerHTML = html;
+
+  const checks = [...startbody.querySelectorAll(".psel")];
+  const totalLbl = document.getElementById("totalsel");
+  const fnombre = document.getElementById("fnombre");
+  const fapellido = document.getElementById("fapellido");
+  const fci = document.getElementById("fci");
+  const warn = document.getElementById("startwarn");
+
+  function validReady(){
+    const n = checks.reduce((a,c)=> a + (c.checked ? counts[+c.dataset.i] : 0), 0);
+    totalLbl.textContent = n + " pregunta" + (n===1?"":"s") + " seleccionada" + (n===1?"":"s");
+    const ok = fnombre.value.trim().length > 0 && fapellido.value.trim().length > 0 &&
+               fci.value.trim().length >= 6 && n > 0;
+    document.getElementById("startbtn").disabled = false; // habilitado siempre; validamos al click
+    return ok;
+  }
+  checks.forEach(c => c.addEventListener("change", validReady));
+  [fnombre, fapellido, fci].forEach(f => f.addEventListener("input", validReady));
+  validReady();
+
+  document.getElementById("startbtn").addEventListener("click", () => {
+    const nOk = fnombre.value.trim().length > 0;
+    const aOk = fapellido.value.trim().length > 0;
+    const cOk = fci.value.trim().length >= 6;
+    const chosen = checks.filter(c => c.checked).map(c => +c.dataset.i);
+    [fnombre, fapellido, fci].forEach(f => f.classList.remove("err"));
+    if (!nOk) fnombre.classList.add("err");
+    if (!aOk) fapellido.classList.add("err");
+    if (!cOk) fci.classList.add("err");
+    if (!nOk || !aOk || !cOk || chosen.length === 0) {
+      warn.classList.add("show");
+      return;
+    }
+    warn.classList.remove("show");
+    student = { nombre: fnombre.value.trim(), apellido: fapellido.value.trim(), ci: fci.value.trim() };
+    beginExam(chosen);
+  });
+}
+
+function shuffleOptions(q){
+  const order = q.opts.map((_,i)=>i);
+  for (let i=order.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+  }
+  const opts = order.map(origIdx => q.opts[origIdx]);
+  let correct;
+  if (q.type === "multi") {
+    const set = new Set(q.correct);
+    correct = order.map((origIdx, newIdx) => set.has(origIdx) ? newIdx : -1).filter(x => x >= 0).sort((a,b)=>a-b);
+  } else {
+    correct = order.indexOf(q.correct);
+  }
+  return {...q, opts, correct};
+}
+
+function beginExam(chosenParts){
+  ALL = [];
+  chosenParts.forEach(pi => {
+    PARTS[pi].questions.forEach(q => ALL.push({...shuffleOptions(q), part: pi}));
+  });
+  TOTAL_Q = ALL.length;
+  TOTAL_PTS = ALL.reduce((a,q)=>a+q.pts, 0);
+  idx = 0;
+  answers = new Array(TOTAL_Q).fill(null);
+  navOpen = false;
+
+  startcard.style.display = "none";
+  progress.style.display = "flex";
+  navToggleBtn.style.display = "";
+  qcard.style.display = "";
+  rcard.classList.remove("show");
+  buildNavGrid();
+  render();
+}
+
+/* ---- navegador de preguntas ---- */
+function buildNavGrid(){
+  let html = "";
+  for (let i=0;i<TOTAL_Q;i++){
+    html += '<button type="button" class="navcell" data-i="' + i + '"></button>';
+  }
+  navGrid.innerHTML = html;
+  [...navGrid.querySelectorAll(".navcell")].forEach(c => c.addEventListener("click", () => {
+    idx = +c.dataset.i;
+    render();
+  }));
+  updateNavGrid();
+}
+function updateNavGrid(){
+  const answered = answers.filter(a => a !== null).length;
+  navToggleTxt.textContent = "Ver todas las preguntas (" + answered + "/" + TOTAL_Q + " respondidas)";
+  [...navGrid.querySelectorAll(".navcell")].forEach((c,i) => {
+    c.textContent = i+1;
+    c.classList.toggle("answered", answers[i] !== null);
+    c.classList.toggle("current", i === idx);
+  });
+}
+navToggleBtn.addEventListener("click", () => {
+  navOpen = !navOpen;
+  navToggleBtn.classList.toggle("open", navOpen);
+  navGrid.classList.toggle("open", navOpen);
+});
+
+/* ---- renderizar pregunta actual ---- */
+function render() {
+  const q = ALL[idx];
+  const part = PARTS[q.part];
+  const multi = q.type === "multi";
+  const current = answers[idx];
+
+  tlabel.textContent = part.short.toLowerCase().replace(/\s+/g,"_") + "_" + String(idx + 1).padStart(3, "0") + ".sh";
+  ptext.textContent = "[ " + (idx+1) + "/" + TOTAL_Q + " ]";
+  const answeredCount = answers.filter(a => a !== null).length;
+  ppts.textContent = answeredCount + "/" + TOTAL_Q + " respondidas";
+  pbar.style.width = ((idx+1) / TOTAL_Q * 100) + "%";
+  updateNavGrid();
+
+  let html = "";
+  html += '<span class="pts">' + q.pts + (q.pts === 1 ? " punto" : " puntos") + "</span>";
+  html += '<span class="badge">PREGUNTA ' + (idx + 1) + "/" + TOTAL_Q + '</span><span class="cat">' + part.name + " · " + q.cat + "</span>";
+  html += '<div class="qtext">' + q.q + "</div>";
+  html += '<div class="hint">' + (multi ? "Seleccioná todas las que correspondan. Podés dejarla en blanco o cambiar de idea." : "Marcá una opción, o dejala en blanco si no estás seguro.") + "</div>";
+  html += '<div class="opts" role="group">';
+  q.opts.forEach((o, i) => {
+    const picked = multi ? (Array.isArray(current) && current.includes(i)) : (current === i);
+    html += '<button type="button" class="opt' + (multi ? " multi" : "") + (picked ? " picked" : "") + '" data-i="' + i + '">' +
+            '<span class="let">' + LETTERS[i] + '</span><span class="txt">' + esc(o) + "</span></button>";
+  });
+  html += "</div>";
+  html += '<div class="actions">' +
+          '<button type="button" class="btn" id="prevBtn"' + (idx===0 ? " disabled" : "") + '>← Anterior</button>' +
+          (idx < TOTAL_Q-1 ? '<button type="button" class="btn" id="nextBtn">Siguiente →</button>' : "") +
+          '<span class="spacer"></span>' +
+          '<button type="button" class="btn finish' + (idx===TOTAL_Q-1 ? " primary" : "") + '" id="finishBtn">Finalizar evaluación</button>' +
+          "</div>";
+  qbody.innerHTML = html;
+
+  const optEls = [...qbody.querySelectorAll(".opt")];
+  optEls.forEach(el => el.addEventListener("click", () => {
+    const i = +el.dataset.i;
+    if (!multi) {
+      answers[idx] = (answers[idx] === i) ? null : i;   // click de nuevo = deseleccionar
+    } else {
+      let set = Array.isArray(answers[idx]) ? answers[idx].slice() : [];
+      const p = set.indexOf(i);
+      if (p >= 0) set.splice(p,1); else set.push(i);
+      answers[idx] = set.length ? set.sort((a,b)=>a-b) : null;
+    }
+    render();
+  }));
+
+  const prevBtn = document.getElementById("prevBtn");
+  if (prevBtn) prevBtn.addEventListener("click", () => { idx--; render(); });
+  const nextBtn = document.getElementById("nextBtn");
+  if (nextBtn) nextBtn.addEventListener("click", () => { idx++; render(); });
+  document.getElementById("finishBtn").addEventListener("click", tryFinish);
+}
+
+function tryFinish(){
+  const pending = answers.filter(a => a === null).length;
+  if (pending > 0) {
+    const ok = confirm("Tenés " + pending + " pregunta" + (pending===1?"":"s") + " sin responder.\n¿Confirmás que querés finalizar y entregar la evaluación de todas formas?");
+    if (!ok) return;
+  } else {
+    const ok = confirm("¿Confirmás que querés finalizar y entregar la evaluación?");
+    if (!ok) return;
+  }
+  finalizeExam();
+}
+
+/* ---- corrección y resumen ---- */
+function isCorrect(q, ans){
+  if (ans === null) return null; // en blanco
+  if (q.type === "multi") {
+    const c = q.correct.slice().sort((a,b)=>a-b);
+    const a = ans.slice().sort((a,b)=>a-b);
+    return c.length === a.length && c.every((v,i)=>v===a[i]);
+  }
+  return ans === q.correct;
+}
+function letterList(idxArr, opts){
+  return idxArr.map(i => LETTERS[i] + ". " + opts[i]).join("<br>");
+}
+
+function finalizeExam(){
+  const partStats = PARTS.map(() => ({pts:0, max:0, ok:0, no:0, blank:0, n:0}));
+  let ok=0, no=0, blank=0, raw=0;
+
+  ALL.forEach((q, i) => {
+    partStats[q.part].max += q.pts;
+    partStats[q.part].n++;
+    const res = isCorrect(q, answers[i]);
+    if (res === null) { blank++; partStats[q.part].blank++; }
+    else if (res) { ok++; raw += q.pts; partStats[q.part].pts += q.pts; partStats[q.part].ok++; }
+    else { no++; raw -= PENALTY; partStats[q.part].no++; }
+  });
+  const finalScore = Math.max(0, raw);
+  const pct = TOTAL_PTS > 0 ? Math.round(finalScore / TOTAL_PTS * 100) : 0;
+
+  qcard.style.display = "none";
+  progress.style.display = "none";
+  navToggleBtn.style.display = "none";
+  navGrid.classList.remove("open");
+  rcard.classList.add("show");
+
+  const now = new Date();
+  const fecha = now.toLocaleString("es-UY", { dateStyle:"long", timeStyle:"short" });
+
+  let html = "";
+  html += '<div class="rhead">$ ./eval_formal_s2.sh --resumen<br>' +
+          "<b>" + esc(student.nombre) + " " + esc(student.apellido) + "</b> · C.I. " + esc(student.ci) + "<br>" +
+          fecha + "</div>";
+  html += '<div class="score-big">' + fmt(finalScore) + '<span class="of"> / ' + TOTAL_PTS + ' pts</span></div>';
+  html += '<div class="msg">' + msgFor(pct) + " (" + pct + "%)</div>";
+  html += '<div class="statrow">' +
+          '<div class="stat ok"><div class="t">CORRECTAS</div><div class="v">' + ok + '</div></div>' +
+          '<div class="stat no"><div class="t">INCORRECTAS</div><div class="v">' + no + '</div></div>' +
+          '<div class="stat blank"><div class="t">EN BLANCO</div><div class="v">' + blank + '</div></div>' +
+          '</div>';
+  html += '<div class="penalty">Penalización aplicada: −' + fmt(no * PENALTY) + ' pts (' + no + ' incorrecta' + (no===1?"":"s") + ' × ' + fmt(PENALTY) + ' pt)' + (raw < 0 ? " · el puntaje se ajustó a 0 (no negativo)" : "") + '</div>';
+
+  html += '<div class="parts">';
+  PARTS.forEach((p, pi) => {
+    const s = partStats[pi];
+    if (!s || s.n === 0) return;
+    html += '<div class="part"><div class="t">' + p.name + '</div>' +
+            '<div class="v">' + fmt(Math.max(0, s.pts - s.no*PENALTY)) + " / " + s.max + " pts</div>" +
+            '<div class="b">✔ ' + s.ok + '  ✘ ' + s.no + '  — ' + s.blank + '</div></div>';
+  });
+  html += "</div>";
+
+  html += '<div class="revtitle">Detalle de respuestas contestadas</div><div class="revwrap">';
+  let anyAnswered = false;
+  PARTS.forEach((p, pi) => {
+    const rows = [];
+    ALL.forEach((q, i) => {
+      if (q.part !== pi) return;
+      if (answers[i] === null) return; // el reporte final solo incluye preguntas contestadas
+      const res = isCorrect(q, answers[i]);
+      const mkClass = res ? "mkok" : "mkno";
+      const mkSym = res ? "✔" : "✘";
+      const yourAns = q.type === "multi" ? letterList(answers[i], q.opts) : LETTERS[answers[i]] + ". " + esc(q.opts[answers[i]]);
+      const correctAns = q.type === "multi" ? letterList(q.correct, q.opts) : LETTERS[q.correct] + ". " + esc(q.opts[q.correct]);
+      rows.push('<div class="revrow"><span class="rn">' + (i+1) + '.</span>' +
+        '<span class="rq"><span class="rqtext">' + q.q + " <span class='" + mkClass + "'>" + mkSym + "</span></span>" +
+        "<div class='rya'>Tu respuesta: " + yourAns + (res===false ? "<br>Correcta: " + correctAns : "") + "</div></span></div>");
+    });
+    if (rows.length) {
+      anyAnswered = true;
+      html += '<div class="revgroup"><div class="revgrouphead">' + p.name + '</div>' + rows.join("") + '</div>';
+    }
+  });
+  if (!anyAnswered) {
+    html += '<div class="revrow"><span class="rq"><span class="rqtext">No respondiste ninguna pregunta.</span></span></div>';
+  }
+  html += "</div>";
+
+  html += '<div class="actions" style="margin-top:20px">' +
+          '<button type="button" class="btn primary" id="share">Compartir resumen</button>' +
+          '<button type="button" class="btn" id="copy">Copiar</button>' +
+          '<button type="button" class="btn" id="printBtn">Imprimir / Guardar PDF</button>' +
+          '<button type="button" class="btn" id="retry">Nueva evaluación</button>' +
+          '<span class="copied" id="copied">copiado ✔</span></div>';
+
+  document.getElementById("rbody").innerHTML = html;
+
+  const text = shareText(student, fecha, finalScore, pct, ok, no, blank, partStats);
+  const flash = () => { const c = document.getElementById("copied"); c.classList.add("on"); setTimeout(() => c.classList.remove("on"), 1800); };
+  const copy = () => {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash, flash);
+    else {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta); flash();
+    }
+  };
+  document.getElementById("copy").addEventListener("click", copy);
+  document.getElementById("share").addEventListener("click", () => {
+    if (navigator.share) navigator.share({ text: text }).catch(() => {});
+    else copy();
+  });
+  document.getElementById("printBtn").addEventListener("click", () => window.print());
+  document.getElementById("retry").addEventListener("click", () => {
+    student = { nombre:"", apellido:"", ci:"" };
+    rcard.classList.remove("show");
+    startcard.style.display = "";
+    renderStart();
+  });
+
+  window.scrollTo({top:0, behavior: "smooth"});
+}
+
+function msgFor(p) {
+  if (p >= 95) return "¡Impecable! Nivel sysadmin senior.";
+  if (p >= 80) return "Muy buen desempeño en Linux II.";
+  if (p >= 60) return "Aprobado — hay puntos concretos para reforzar.";
+  if (p >= 40) return "Insuficiente — conviene repasar el material antes de reintentar.";
+  return "Necesita repaso a fondo antes del próximo intento.";
+}
+
+function shareText(st, fecha, score, pct, ok, no, blank, partStats){
+  let t = "Evaluación Formal · Linux II — Redes POSIX\n" +
+          st.nombre + " " + st.apellido + " · C.I. " + st.ci + "\n" +
+          fecha + "\n" +
+          "Puntaje: " + fmt(score) + "/" + TOTAL_PTS + " pts (" + pct + "%)\n" +
+          "Correctas: " + ok + " · Incorrectas: " + no + " · En blanco: " + blank + "\n";
+  PARTS.forEach((p, pi) => {
+    const s = partStats[pi];
+    if (!s || s.n === 0) return;
+    t += "- " + p.name + ": " + fmt(Math.max(0, s.pts - s.no*PENALTY)) + "/" + s.max + " pts\n";
+  });
+  return t;
+}
+
+renderStart();
+</script>
+</body>
+</html>
